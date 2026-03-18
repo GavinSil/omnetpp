@@ -1,0 +1,1 @@
+export PATH="$__omnetpp_root_dir/bin:$PATH"
