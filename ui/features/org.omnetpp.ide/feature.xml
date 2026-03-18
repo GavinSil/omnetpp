@@ -6,7 +6,7 @@
       provider-name="OpenSim Ltd."
       os="linux,macosx,win32"
       ws="cocoa,gtk,win32"
-      arch="x86_64,aarch64">
+      arch="x86_64">
 
    <requires>
       <import feature="org.eclipse.platform"/>
@@ -41,22 +41,24 @@
          arch="x86_64"
          version="0.0.0"/>
 
-   <plugin
-         id="org.omnetpp.ide.nativelibs.linux.aarch64"
-         os="linux"
-         arch="aarch64"
-         version="0.0.0"/>
+<!-- Commented out for local Linux x86_64 build
+    <plugin
+          id="org.omnetpp.ide.nativelibs.linux.aarch64"
+          os="linux"
+          arch="aarch64"
+          version="0.0.0"/>
 
-   <plugin
-         id="org.omnetpp.ide.nativelibs.macosx"
-         os="macosx"
-         version="0.0.0"/>
+    <plugin
+          id="org.omnetpp.ide.nativelibs.macosx"
+          os="macosx"
+          version="0.0.0"/>
 
-   <plugin
-         id="org.omnetpp.ide.nativelibs.win32.x86_64"
-         os="win32"
-         arch="x86_64"
-         version="0.0.0"/>
+    <plugin
+          id="org.omnetpp.ide.nativelibs.win32.x86_64"
+          os="win32"
+          arch="x86_64"
+          version="0.0.0"/>
+-->
 
    <plugin
          id="org.omnetpp.inifile.editor"
