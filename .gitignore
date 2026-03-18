@@ -171,3 +171,4 @@ backups
 compile_commands.json
 lex.*yy.cc
 out/
+ui/target/
