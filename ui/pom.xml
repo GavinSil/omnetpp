@@ -70,13 +70,15 @@
                         <org.eclipse.justj.buildtime>true</org.eclipse.justj.buildtime>
                   </profileProperties>
                </dependency-resolution>
-               <environments>
-                  <environment><os>linux</os><ws>gtk</ws><arch>x86_64</arch></environment>
-                  <environment><os>linux</os><ws>gtk</ws><arch>aarch64</arch></environment>
-                  <environment><os>win32</os><ws>win32</ws><arch>x86_64</arch></environment>
-                  <environment><os>macosx</os><ws>cocoa</ws><arch>x86_64</arch></environment>
-                  <environment><os>macosx</os><ws>cocoa</ws><arch>aarch64</arch></environment>
-               </environments>
+<environments>
+                   <environment><os>linux</os><ws>gtk</ws><arch>x86_64</arch></environment>
+                   <!-- Skip non-linux platforms for this build
+                   <environment><os>linux</os><ws>gtk</ws><arch>aarch64</arch></environment>
+                   <environment><os>win32</os><ws>win32</ws><arch>x86_64</arch></environment>
+                   <environment><os>macosx</os><ws>cocoa</ws><arch>x86_64</arch></environment>
+                   <environment><os>macosx</os><ws>cocoa</ws><arch>aarch64</arch></environment>
+                   -->
+                </environments>
             </configuration>
          </plugin>
 
@@ -130,8 +132,8 @@
                         <phase>process-sources</phase>
                         <configuration>
                         <target>
-                           <replace dir="." token="##VERSION##" value="${VERSION}" />
-                           <replace dir="." token="##BUILDID##" value="${BUILDID}" />
+                           <replace dir="." token="6.4.0" value="${VERSION}" />
+                           <replace dir="." token="local" value="${BUILDID}" />
                            <!-- in org.omnetpp.common -->
                            <replace dir="." token="IS_COMMERCIAL = true;" value="IS_COMMERCIAL = false;">
                               <include name="**/*.java" />
@@ -167,8 +169,8 @@
                      <phase>process-sources</phase>
                      <configuration>
                      <target>
-                        <replace dir="." token="##VERSION##" value="${VERSION}" />
-                        <replace dir="." token="##BUILDID##" value="${BUILDID}" />
+                        <replace dir="." token="6.4.0" value="${VERSION}" />
+                        <replace dir="." token="local" value="${BUILDID}" />
                         <replace dir="." token= "intro-omnetpp.png" value="intro-omnest.png" >
                            <include name="plugin.xml" />
                         </replace>
@@ -218,9 +220,11 @@
       <module>org.omnetpp.figures</module>
       <module>org.omnetpp.ide.nativelibs</module>
       <module>org.omnetpp.ide.nativelibs.linux.x86_64</module>
+      <!-- Skip non-x86_64 platforms for this build
       <module>org.omnetpp.ide.nativelibs.linux.aarch64</module>
       <module>org.omnetpp.ide.nativelibs.macosx</module>
       <module>org.omnetpp.ide.nativelibs.win32.x86_64</module>
+      -->
       <module>org.omnetpp.inifile.editor</module>
       <module>org.omnetpp.launch</module>
       <module>org.omnetpp.main</module>
