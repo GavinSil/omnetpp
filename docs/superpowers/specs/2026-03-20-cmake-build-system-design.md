@@ -31,17 +31,19 @@ Add CMake build support to OMNeT++ 6.4.0 as a parallel build system alongside th
 | oppqtenv | `OMNeTpp::qtenv` | `liboppqtenv.so` |
 
 ### Tools and Executables
-| Tool | CMake Target | Purpose |
-|------|--------------|---------|
-| opp_run | `OMNeTpp::opp_run` | Main simulation runner |
-| opp_nedtool | `OMNeTpp::opp_nedtool` | NED file compiler |
-| opp_msgtool | `OMNeTpp::opp_msgtool` | MSG file compiler |
-| opp_scavetool | `OMNeTpp::opp_scavetool` | Result file processor |
-| opp_makemake | `OMNeTpp::opp_makemake` | Makefile generator |
-| opp_test | `OMNeTpp::opp_test` | Test runner |
-| opp_featuretool | `OMNeTpp::opp_featuretool` | Feature toggle manager |
-| opp_charttool | `OMNeTpp::opp_charttool` | Chart generation (requires WITH_SCAVE_PYTHON_BINDINGS) |
-| opp_configfilepath | `OMNeTpp::opp_configfilepath` | Returns path to Makefile.inc |
+| Tool | CMake Target | Purpose | Notes |
+|------|--------------|---------|-------|
+| opp_run | `OMNeTpp::opp_run` | Main simulation runner | |
+| opp_nedtool | `OMNeTpp::opp_nedtool` | NED file compiler | |
+| opp_msgtool | `OMNeTpp::opp_msgtool` | MSG file compiler | |
+| opp_scavetool | `OMNeTpp::opp_scavetool` | Result file processor | |
+| opp_makemake | `OMNeTpp::opp_makemake` | Makefile generator | |
+| opp_test | `OMNeTpp::opp_test` | Test runner | |
+| opp_featuretool | `OMNeTpp::opp_featuretool` | Feature toggle manager | |
+| opp_configfilepath | `OMNeTpp::opp_configfilepath` | Returns path to Makefile.inc | |
+| opp_charttool | `OMNeTpp::opp_charttool` | Chart generation | **Requires Python bindings (out of scope)** |
+
+**Note on opp_charttool**: This tool requires `WITH_SCAVE_PYTHON_BINDINGS=ON` and the scave Python bindings to be built. Since Python bindings are out of scope for this initial CMake implementation, `opp_charttool` will NOT be built by default. Users who need it should continue using the Makefile build system.
 
 ### Excluded from Scope
 - Python bindings (`src/scave/python/`)
@@ -64,14 +66,14 @@ option(WITH_SYSTEMC "Enable SystemC support" OFF)
 option(WITH_LIBXML "Enable LibXML2 for DOCTYPE XML files" OFF)
 option(WITH_AKAROA "Enable Akaroa support" OFF)
 option(WITH_BACKTRACE "Enable backtrace printing on exceptions" ON)
-option(WITH_SCAVE_PYTHON_BINDINGS "Enable scave Python bindings" ON)
+option(WITH_SCAVE_PYTHON_BINDINGS "Enable scave Python bindings (required for opp_charttool)" OFF)
 
 # Build options
 option(OMNETPP_SHARED_LIBS "Build shared libraries" ON)
 option(PREFER_SQLITE_RESULT_FILES "Use SQLite as default result format" OFF)
 ```
 
-**Note**: `opp_charttool` requires `WITH_SCAVE_PYTHON_BINDINGS=ON`. If disabled, `opp_charttool` will not be built.
+**Note**: `WITH_SCAVE_PYTHON_BINDINGS` is OFF by default because Python bindings are out of scope for this initial CMake implementation. When OFF, `opp_charttool` will not be built.
 
 ### Build Types (Simplified)
 
@@ -86,18 +88,18 @@ option(PREFER_SQLITE_RESULT_FILES "Use SQLite as default result format" OFF)
 | Source | Generated Files | CMake Mechanism |
 |--------|-----------------|-----------------|
 | `expression.y` | `expression.tab.cc`, `expression.tab.h` | `BISON_TARGET()` |
-| `expression.lex` | `expression.lex.cc` | `FLEX_TARGET()` |
+| `expression.lex` | `expression.lex.cc`, `expression.lex.h` | `FLEX_TARGET()` |
 | `matchexpression.y` | `matchexpression.tab.cc`, `matchexpression.tab.h` | `BISON_TARGET()` |
-| `matchexpression.lex` | `matchexpression.lex.cc` | `FLEX_TARGET()` |
 
 ### src/nedxml/
 | Source | Generated Files | CMake Mechanism |
 |--------|-----------------|-----------------|
 | `ned2.y` | `ned2.tab.cc`, `ned2.tab.h` | `BISON_TARGET()` |
-| `ned2.lex` | `ned2.lex.cc` | `FLEX_TARGET()` |
+| `ned2.lex` | `ned2.lex.cc`, `ned2.lex.h` | `FLEX_TARGET()` |
 | `msg2.y` | `msg2.tab.cc`, `msg2.tab.h` | `BISON_TARGET()` |
-| `msg2.lex` | `msg2.lex.cc` | `FLEX_TARGET()` |
-| `dtdclassgen.pl` | `dtdvalidationclasses.cc/h` | `add_custom_command()` |
+| `msg2.lex` | `msg2.lex.cc`, `msg2.lex.h` | `FLEX_TARGET()` |
+| `../sim/sim_std.msg` | `sim_std_msg.cc` | `opp_msgtool` (built in sim, linked here) |
+| DTD files | `nedelements.cc/h`, `nedvalidator.cc/h` | `add_custom_command()` |
 
 ### src/sim/
 | Source | Generated Files | CMake Mechanism |
@@ -112,7 +114,7 @@ option(PREFER_SQLITE_RESULT_FILES "Use SQLite as default result format" OFF)
 ### src/eventlog/
 | Source | Generated Files | CMake Mechanism |
 |--------|-----------------|-----------------|
-| `eventlogentries.msg` | `eventlogentries_m.cc/h` | `opp_msgtool` |
+| `eventlogentries.txt` + `eventlogentries.pl` | `eventlogentries.h`, `eventlogentries.cc`, `eventlogentries.csv`, `eventlogentryfactory.cc` | `add_custom_command()` |
 
 ### src/qtenv/
 | Source | Generated Files | CMake Mechanism |
@@ -360,7 +362,8 @@ cmake -B build-nopython -DCMAKE_BUILD_TYPE=Release -DWITH_SCAVE_PYTHON_BINDINGS=
 | Makefile.inc | Generate in build tree immediately |
 | setenv | Generate shell script in build tree |
 | opp_configfilepath | Return full path to Makefile.inc |
-| opp_charttool | Built only when WITH_SCAVE_PYTHON_BINDINGS=ON |
+| opp_charttool | NOT built by default (requires Python bindings which are out of scope) |
+| WITH_SCAVE_PYTHON_BINDINGS | OFF by default |
 
 ## References
 
