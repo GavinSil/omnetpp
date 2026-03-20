@@ -2,7 +2,7 @@
 
 **Date**: 2026-03-20
 **Author**: AI Agent
-**Status**: Draft (Revised after Oracle review)
+**Status**: Draft (Revised v2)
 
 ## Overview
 
@@ -16,8 +16,6 @@ Add CMake build support to OMNeT++ 6.4.0 as a parallel build system alongside th
 - **Coexistence**: CMake and Makefile run in parallel, user selects
 
 ## Deliverables (Complete Developer Runtime)
-
-A CMake build must produce a usable OMNeT++ runtime, not just libraries:
 
 ### Libraries
 | Library | CMake Target | Output File |
@@ -42,77 +40,13 @@ A CMake build must produce a usable OMNeT++ runtime, not just libraries:
 | opp_makemake | `OMNeTpp::opp_makemake` | Makefile generator |
 | opp_test | `OMNeTpp::opp_test` | Test runner |
 | opp_featuretool | `OMNeTpp::opp_featuretool` | Feature toggle manager |
-| opp_charttool | `OMNeTpp::opp_charttool` | Chart generation |
+| opp_charttool | `OMNeTpp::opp_charttool` | Chart generation (requires WITH_SCAVE_PYTHON_BINDINGS) |
+| opp_configfilepath | `OMNeTpp::opp_configfilepath` | Returns path to Makefile.inc |
 
 ### Excluded from Scope
 - Python bindings (`src/scave/python/`)
 - JNI native libs (`ui/org.omnetpp.ide.nativelibs/`)
 - IDE plugins (`ui/` Maven/Tycho build)
-
-## Non-Goals
-
-- Replace existing Makefile system (coexistence model)
-- Support Python bindings or JNI native libs via CMake
-- Windows/macOS platform support (future work)
-- Modify sample project build (they continue using `opp_makemake`)
-
-## Architecture
-
-### Directory Structure
-
-```
-/workspace/omnetpp/
-├── CMakeLists.txt              # Root configuration
-├── cmake/
-│   ├── OMNeTppConfig.cmake     # Platform detection, compiler setup
-│   ├── OMNeTppFeatures.cmake   # Feature toggles
-│   ├── OMNeTppDependencies.cmake # External dependency find_package wrappers
-│   ├── OMNeTppMsgCompiler.cmake # opp_msgtool integration
-│   ├── OMNeTppCodeGen.cmake    # Flex/bison/codegen helpers
-│   └── ver.h.in                # Version header template
-├── src/
-│   ├── common/CMakeLists.txt
-│   ├── layout/CMakeLists.txt
-│   ├── eventlog/CMakeLists.txt
-│   ├── scave/CMakeLists.txt
-│   ├── nedxml/CMakeLists.txt   # + opp_nedtool, opp_msgtool
-│   ├── sim/CMakeLists.txt
-│   ├── envir/CMakeLists.txt    # + opp_run
-│   ├── cmdenv/CMakeLists.txt
-│   ├── qtenv/CMakeLists.txt
-│   └── utils/CMakeLists.txt    # opp_makemake, opp_test, etc.
-└── include/omnetpp/
-```
-
-### Library Dependency Graph
-
-```
-                    ┌─────────────┐
-                    │  oppcommon  │
-                    └──────┬──────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
-┌───────────┐    ┌─────────────┐    ┌─────────────┐
-│ opplayout │    │ oppscave    │    │ oppnedxml   │ ← opp_nedtool, opp_msgtool
-└───────────┘    └─────────────┘    └──────┬──────┘
-        │                                   │
-        │         ┌─────────────┐           │
-        │         │  oppsim     │◄──────────┘
-        │         └──────┬──────┘
-        │                │
-        │         ┌──────┴──────┐
-        │         │  oppenvir   │ ← opp_run
-        │         └──────┬──────┘
-        │                │
-        │    ┌───────────┴───────────┐
-        │    │                       │
-        ▼    ▼                       ▼
-┌─────────────┐              ┌─────────────┐
-│ oppcmdenv   │              │ oppqtenv    │
-└─────────────┘              └─────────────┘
-```
 
 ## Feature Toggles
 
@@ -130,47 +64,81 @@ option(WITH_SYSTEMC "Enable SystemC support" OFF)
 option(WITH_LIBXML "Enable LibXML2 for DOCTYPE XML files" OFF)
 option(WITH_AKAROA "Enable Akaroa support" OFF)
 option(WITH_BACKTRACE "Enable backtrace printing on exceptions" ON)
+option(WITH_SCAVE_PYTHON_BINDINGS "Enable scave Python bindings" ON)
 
 # Build options
 option(OMNETPP_SHARED_LIBS "Build shared libraries" ON)
 option(PREFER_SQLITE_RESULT_FILES "Use SQLite as default result format" OFF)
 ```
 
-### Build Types (Simplified)
+**Note**: `opp_charttool` requires `WITH_SCAVE_PYTHON_BINDINGS=ON`. If disabled, `opp_charttool` will not be built.
 
-For initial implementation, support only Release and Debug:
+### Build Types (Simplified)
 
 | CMAKE_BUILD_TYPE | Equivalent MODE | Output Suffix |
 |-------------------|-----------------|---------------|
 | Release | release | (none) |
 | Debug | debug | `_dbg` |
 
-**Future work**: Add sanitize/profile/coverage as explicit CMake presets or custom targets, not remapped standard build types.
+## Generated Artifacts (Complete Inventory)
 
-## Generated Artifacts
-
-### Complete Inventory
-
+### src/common/
 | Source | Generated Files | CMake Mechanism |
 |--------|-----------------|-----------------|
-| `*.msg` | `*_m.cc`, `*_m.h` | `add_custom_command()` via `opp_msgtool` |
-| `*.y` (bison) | `*.tab.cc`, `*.tab.h` | `find_package(BISON)` + `BISON_TARGET()` |
-| `*.lex` (flex) | `*.lex.cc` | `find_package(FLEX)` + `FLEX_TARGET()` |
-| `*.ui` (Qt) | `ui_*.h` | `AUTOUIC` |
+| `expression.y` | `expression.tab.cc`, `expression.tab.h` | `BISON_TARGET()` |
+| `expression.lex` | `expression.lex.cc` | `FLEX_TARGET()` |
+| `matchexpression.y` | `matchexpression.tab.cc`, `matchexpression.tab.h` | `BISON_TARGET()` |
+| `matchexpression.lex` | `matchexpression.lex.cc` | `FLEX_TARGET()` |
+
+### src/nedxml/
+| Source | Generated Files | CMake Mechanism |
+|--------|-----------------|-----------------|
+| `ned2.y` | `ned2.tab.cc`, `ned2.tab.h` | `BISON_TARGET()` |
+| `ned2.lex` | `ned2.lex.cc` | `FLEX_TARGET()` |
+| `msg2.y` | `msg2.tab.cc`, `msg2.tab.h` | `BISON_TARGET()` |
+| `msg2.lex` | `msg2.lex.cc` | `FLEX_TARGET()` |
+| `dtdclassgen.pl` | `dtdvalidationclasses.cc/h` | `add_custom_command()` |
+
+### src/sim/
+| Source | Generated Files | CMake Mechanism |
+|--------|-----------------|-----------------|
+| `sim_std.msg` | `sim_std_m.cc`, `sim_std_m.h` | `opp_msgtool` |
+
+### src/envir/
+| Source | Generated Files | CMake Mechanism |
+|--------|-----------------|-----------------|
+| `eventlogwriter.pl` | `eventlogwriter.cc`, `eventlogwriter.h` | `add_custom_command()` |
+
+### src/eventlog/
+| Source | Generated Files | CMake Mechanism |
+|--------|-----------------|-----------------|
+| `eventlogentries.msg` | `eventlogentries_m.cc/h` | `opp_msgtool` |
+
+### src/qtenv/
+| Source | Generated Files | CMake Mechanism |
+|--------|-----------------|-----------------|
+| `*.ui` | `ui_*.h` | `AUTOUIC` |
 | `*.h` (Q_OBJECT) | `moc_*.cpp` | `AUTOMOC` |
-| `*.qrc` (Qt) | `qrc_*.cpp` | `AUTORCC` |
-| `sim_std.msg` (sim) | `sim_std_m.cc/h` | `opp_msgtool` |
-| `eventlogwriter.pl` (envir) | `eventlogwriter.cc/h` | `add_custom_command()` |
-| `dtdclassgen.pl` (nedxml) | `dtdvalidationclasses.cc/h` | `add_custom_command()` |
-| `icons_dark.qrc` (qtenv) | Generated from icons.qrc | `add_custom_command()` |
+| `*.qrc` | `qrc_*.cpp` | `AUTORCC` |
+| `icons.qrc` + dark SVG generation | `icons_dark.qrc` | `add_custom_command()` |
 
-### Bootstrap Order
+### src/qtenv/osg/ (optional, WITH_OSG)
+| Source | Generated Files | CMake Mechanism |
+|--------|-----------------|-----------------|
+| `osg.msg` | `osg_m.cc/h` | `opp_msgtool` |
 
-Some tools are built by the project and then used to generate sources:
+## Bootstrap Order
 
-1. **Phase 1**: Build `opp_nedtool`, `opp_msgtool` (from nedxml)
-2. **Phase 2**: Use these tools to generate `*_m.cc` files
-3. **Phase 3**: Build libraries that depend on generated sources
+```
+Phase 1: Build code generators
+  └─ opp_nedtool, opp_msgtool (from src/nedxml/)
+
+Phase 2: Generate sources using tools from Phase 1
+  └─ MSG files → *_m.cc via opp_msgtool
+
+Phase 3: Build libraries with generated sources
+  └─ sim → envir → cmdenv/qtenv
+```
 
 CMake handles this via target dependencies:
 ```cmake
@@ -181,31 +149,82 @@ add_custom_command(
 )
 ```
 
-## Compatibility Layer
+## Compatibility Layer (Critical for opp_makemake)
 
-### setenv Compatibility
+### Rule: CMake builds must generate shell-compatible artifacts
 
-CMake builds generate a `setenv.cmake` that can be sourced:
+A CMake build MUST produce:
+1. **Shell `setenv` script** in build tree (not just on install)
+2. **`Makefile.inc`** in build tree (for `opp_makemake`)
+3. **`opp_configfilepath`** executable that returns the Makefile.inc path
+
+### setenv Script
+
+Generate a shell script, not a CMake file:
 
 ```bash
-# After CMake build
-source build/setenv.cmake  # Sets PATH, LD_LIBRARY_PATH
+# build/setenv (generated by CMake)
+export OMNETPP_ROOT="/workspace/omnetpp"
+export OMNETPP_IMAGE_PATH="$OMNETPP_ROOT/images"
+export PATH="$OMNETPP_ROOT/build/bin:$PATH"
+export LD_LIBRARY_PATH="$OMNETPP_ROOT/build/lib:$LD_LIBRARY_PATH"
 ```
 
-### opp_configfilepath Compatibility
+Generated by CMake:
+```cmake
+configure_file(
+  "${CMAKE_SOURCE_DIR}/cmake/setenv.in"
+  "${CMAKE_BINARY_DIR}/setenv"
+  @ONLY
+)
+```
 
-Generate `opp_configfilepath` executable that returns the config path:
-- Returns `CMAKE_INSTALL_PREFIX/lib/omnetpp` for installed builds
-- Returns `CMAKE_BINARY_DIR` for in-tree builds
+### Makefile.inc Generation
 
-### Makefile.inc Compatibility (Optional)
+Generate in build tree immediately after CMake configuration:
 
-For `opp_makemake` to work with CMake-built OMNeT++:
+```cmake
+# Generate Makefile.inc for opp_makemake compatibility
+configure_file(
+  "${CMAKE_SOURCE_DIR}/cmake/Makefile.inc.in"
+  "${CMAKE_BINARY_DIR}/Makefile.inc"
+  @ONLY
+)
+```
 
-1. **Option A**: Generate `Makefile.inc` from CMake variables
-2. **Option B**: `opp_makemake` learns to read CMake cache
+### opp_configfilepath
 
-**Decision**: Option A for initial implementation. Generate `Makefile.inc` during install.
+Must return the actual Makefile.inc file path:
+
+```cpp
+// src/utils/opp_configfilepath.cc
+int main() {
+    std::cout << CMAKE_BINARY_DIR << "/Makefile.inc" << std::endl;
+    return 0;
+}
+```
+
+Generated at configure time to embed the path:
+```cmake
+configure_file(
+  "${CMAKE_SOURCE_DIR}/src/utils/opp_configfilepath.cc.in"
+  "${CMAKE_BINARY_DIR}/opp_configfilepath.cc"
+  @ONLY
+)
+add_executable(opp_configfilepath "${CMAKE_BINARY_DIR}/opp_configfilepath.cc")
+```
+
+### Verification
+
+The acceptance test "Sample Build" can now work:
+```bash
+cmake -B build
+cmake --build build
+source build/setenv
+cd samples/tictoc
+opp_makemake --deep  # Uses opp_configfilepath → build/Makefile.inc
+make
+```
 
 ## Installation Layout
 
@@ -222,18 +241,17 @@ install(DIRECTORY include/omnetpp
 
 install(FILES 
   cmake/OMNeTppConfig.cmake
-  cmake/OMNeTppConfigVersion.cmake
   DESTINATION lib/cmake/OMNeTpp
 )
 
-install(EXPORT OMNeTppTargets
-  FILE OMNeTppTargets.cmake
-  NAMESPACE OMNeTpp::
-  DESTINATION lib/cmake/OMNeTpp
+# Install compatibility files
+install(FILES "${CMAKE_BINARY_DIR}/setenv"
+  DESTINATION .
+  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 )
-
-# Generate compatibility files
-install(SCRIPT "${CMAKE_SOURCE_DIR}/cmake/install_compat.cmake")
+install(FILES "${CMAKE_BINARY_DIR}/Makefile.inc"
+  DESTINATION .
+)
 ```
 
 ## Build Commands
@@ -242,24 +260,21 @@ install(SCRIPT "${CMAKE_SOURCE_DIR}/cmake/install_compat.cmake")
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(nproc)
+source build/setenv
 ```
 
 ### Debug Build
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j$(nproc)
-```
-
-### Install
-```bash
-cmake --install build --prefix /opt/omnetpp
-source /opt/omnetpp/setenv
+source build/setenv
 ```
 
 ### With Features Disabled
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release \
-  -DWITH_QTENV=OFF -DWITH_PYTHON=OFF
+  -DWITH_QTENV=OFF \
+  -DWITH_SCAVE_PYTHON_BINDINGS=OFF
 ```
 
 ## Testing Strategy
@@ -270,86 +285,86 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release \
 |------|---------------|
 | **Configure** | `cmake -B build` succeeds |
 | **Build** | `cmake --build build` completes with 0 errors |
-| **Library Inventory** | All 9 libraries built, `nm` shows expected symbols |
-| **Tool Inventory** | All 8 tools built and executable |
-| **opp_run Test** | Run `opp_run -h` successfully |
-| **Sample Build** | Build one sample simulation with `opp_makemake` |
+| **setenv** | `source build/setenv` succeeds, PATH updated |
+| **Library Inventory** | All 9 libraries built |
+| **Tool Inventory** | All tools built and executable |
+| **opp_run Test** | `opp_run -h` succeeds |
+| **opp_configfilepath** | Returns `build/Makefile.inc` |
+| **opp_makemake Test** | Build a sample simulation with opp_makemake |
 | **Sample Run** | Run the sample simulation successfully |
-| **Parity Check** | Same simulation produces same output with Make vs CMake builds |
 
-### Test Configuration
+### Test Matrix
 ```bash
-# Minimum test matrix
+# Minimum configurations to test
 cmake -B build-release -DCMAKE_BUILD_TYPE=Release
 cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
 cmake -B build-noqt -DCMAKE_BUILD_TYPE=Release -DWITH_QTENV=OFF
+cmake -B build-nopython -DCMAKE_BUILD_TYPE=Release -DWITH_SCAVE_PYTHON_BINDINGS=OFF
 ```
 
 ## Risks and Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
-| Bootstrap ordering issues | Medium | High | CMake target dependencies, prototype early |
-| MSG tool not found | Low | High | Build tool first, then use in same CMake run |
-| Qt version incompatibility | Low | Medium | Require Qt >= 6.2, explicit error message |
-| Linker flag differences | Medium | Medium | Compare `ldd` output, rpath handling |
-| Generated source divergence | Low | Medium | Byte-compare generated files with Make build |
-| opp_makemake incompatibility | Medium | High | Generate Makefile.inc during install |
+| Bootstrap ordering issues | Medium | High | CMake target dependencies |
+| MSG tool not found | Low | High | Build tool first with DEPENDS |
+| Qt version incompatibility | Low | Medium | Require Qt >= 6.2 |
+| Makefile.inc drift | Medium | Medium | Generate from CMake variables |
+| opp_makemake incompatibility | Medium | High | Test with sample projects |
 
 ## Implementation Phases
 
 ### Phase 1: Infrastructure (1-2 days)
-- Root CMakeLists.txt with version, options
-- cmake/ modules for features, dependencies, config
-- Generated sources: ver.h, opp_configfilepath
+- Root CMakeLists.txt
+- cmake/ modules
+- Compatibility layer: setenv, Makefile.inc, opp_configfilepath
 
 ### Phase 2: Core Libraries (2-3 days)
-- src/common/CMakeLists.txt (no generated sources)
-- src/layout/CMakeLists.txt
-- src/eventlog/CMakeLists.txt
-- src/scave/CMakeLists.txt
+- src/common/ with flex/bison
+- src/layout/
+- src/eventlog/ with MSG
+- src/scave/
 
 ### Phase 3: Tools and NED/XML (2-3 days)
-- src/nedxml/CMakeLists.txt with flex/bison
-- opp_nedtool, opp_msgtool executables
-- MSG compiler cmake function
+- src/nedxml/ with flex/bison
+- opp_nedtool, opp_msgtool
 
 ### Phase 4: Simulation Kernel (2-3 days)
-- src/sim/CMakeLists.txt with MSG compilation
-- sim_std_m.cc generation
+- src/sim/ with MSG
+- Generated sim_std_m.cc
 
 ### Phase 5: Runtime Environment (1-2 days)
-- src/envir/CMakeLists.txt with eventlogwriter generation
-- src/cmdenv/CMakeLists.txt
-- opp_run executable
+- src/envir/ with eventlogwriter
+- src/cmdenv/
+- opp_run
 
 ### Phase 6: Qt GUI (2-3 days)
-- src/qtenv/CMakeLists.txt
-- Qt6 integration with AUTOMOC/UIC/RCC
-- OSG subdirectory (optional)
+- src/qtenv/ with AUTOMOC/UIC/RCC
+- OSG support (optional)
 
-### Phase 7: Utils and Polish (1-2 days)
-- src/utils/CMakeLists.txt
-- Install targets, export config
-- Compatibility layer (setenv, Makefile.inc)
+### Phase 7: Utils (1 day)
+- src/utils/
+- opp_makemake, opp_test, etc.
 
 ### Phase 8: Testing (1-2 days)
-- Verify all acceptance criteria
+- All acceptance criteria
 - Sample simulation tests
-- Documentation
 
 **Total Estimated Effort**: 12-18 days
 
-## Decisions (Addressing Open Questions)
+## Decisions Summary
 
-1. **Output Directory**: Use `build/` as default. Users can specify any directory via `-B`.
-2. **Makefile.inc Generation**: Generate during `cmake --install` for `opp_makemake` compatibility.
-3. **setenv Script**: Generate `setenv.cmake` during build, `setenv` during install.
+| Question | Decision |
+|----------|----------|
+| Output directory | `build/` default, user can change via `-B` |
+| Makefile.inc | Generate in build tree immediately |
+| setenv | Generate shell script in build tree |
+| opp_configfilepath | Return full path to Makefile.inc |
+| opp_charttool | Built only when WITH_SCAVE_PYTHON_BINDINGS=ON |
 
 ## References
 
-- Existing Makefile structure: `/workspace/omnetpp/Makefile`
-- Configuration template: `/workspace/omnetpp/Makefile.inc.in`
-- Subsystem Makefiles: `/workspace/omnetpp/src/*/Makefile`
-- AGENTS.md: `/workspace/omnetpp/AGENTS.md`
+- Existing Makefile: `/workspace/omnetpp/Makefile`
+- Makefile.inc.in: `/workspace/omnetpp/Makefile.inc.in`
 - configure.user.dist: `/workspace/omnetpp/configure.user.dist`
+- AGENTS.md: `/workspace/omnetpp/AGENTS.md`
