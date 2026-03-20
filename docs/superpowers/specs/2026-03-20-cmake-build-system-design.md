@@ -18,17 +18,18 @@ Add CMake build support to OMNeT++ 6.4.0 as a parallel build system alongside th
 ## Deliverables (Complete Developer Runtime)
 
 ### Libraries
-| Library | CMake Target | Output File |
-|---------|--------------|-------------|
-| oppcommon | `OMNeTpp::common` | `liboppcommon.so` |
-| opplayout | `OMNeTpp::layout` | `libopplayout.so` |
-| oppeventlog | `OMNeTpp::eventlog` | `liboppeventlog.so` |
-| oppscave | `OMNeTpp::scave` | `liboppscave.so` |
-| oppnedxml | `OMNeTpp::nedxml` | `liboppnedxml.so` |
-| oppsim | `OMNeTpp::sim` | `liboppsim.so` |
-| oppenvir | `OMNeTpp::envir` | `liboppenvir.so` |
-| oppcmdenv | `OMNeTpp::cmdenv` | `liboppcmdenv.so` |
-| oppqtenv | `OMNeTpp::qtenv` | `liboppqtenv.so` |
+| Library | CMake Target | Output File | Notes |
+|---------|--------------|-------------|-------|
+| oppcommon | `OMNeTpp::common` | `liboppcommon.so` | |
+| opplayout | `OMNeTpp::layout` | `libopplayout.so` | |
+| oppeventlog | `OMNeTpp::eventlog` | `liboppeventlog.so` | |
+| oppscave | `OMNeTpp::scave` | `liboppscave.so` | |
+| oppnedxml | `OMNeTpp::nedxml` | `liboppnedxml.so` | |
+| oppsim | `OMNeTpp::sim` | `liboppsim.so` | |
+| oppenvir | `OMNeTpp::envir` | `liboppenvir.so` | |
+| oppcmdenv | `OMNeTpp::cmdenv` | `liboppcmdenv.so` | |
+| oppqtenv | `OMNeTpp::qtenv` | `liboppqtenv.so` | |
+| oppmain | `OMNeTpp::main` | `liboppmain.a` | Static library for executable linking |
 
 ### Tools and Executables
 | Tool | CMake Target | Purpose | Notes |
@@ -36,12 +37,15 @@ Add CMake build support to OMNeT++ 6.4.0 as a parallel build system alongside th
 | opp_run | `OMNeTpp::opp_run` | Main simulation runner | |
 | opp_nedtool | `OMNeTpp::opp_nedtool` | NED file compiler | |
 | opp_msgtool | `OMNeTpp::opp_msgtool` | MSG file compiler | |
+| opp_msgc | `OMNeTpp::opp_msgc` | MSG compiler wrapper | Shell script calling opp_msgtool |
 | opp_scavetool | `OMNeTpp::opp_scavetool` | Result file processor | |
 | opp_makemake | `OMNeTpp::opp_makemake` | Makefile generator | |
 | opp_test | `OMNeTpp::opp_test` | Test runner | |
 | opp_featuretool | `OMNeTpp::opp_featuretool` | Feature toggle manager | |
 | opp_configfilepath | `OMNeTpp::opp_configfilepath` | Returns path to Makefile.inc | |
 | opp_charttool | `OMNeTpp::opp_charttool` | Chart generation | **Requires Python bindings (out of scope)** |
+
+**Note on opp_msgc**: This is a shell script wrapper that calls `opp_msgtool`. It's required because `opp_makemake`-generated Makefiles use `$(MSGC)` which defaults to `opp_msgc`.
 
 **Note on opp_charttool**: This tool requires `WITH_SCAVE_PYTHON_BINDINGS=ON` and the scave Python bindings to be built. Since Python bindings are out of scope for this initial CMake implementation, `opp_charttool` will NOT be built by default. Users who need it should continue using the Makefile build system.
 
@@ -98,7 +102,7 @@ option(PREFER_SQLITE_RESULT_FILES "Use SQLite as default result format" OFF)
 | `ned2.lex` | `ned2.lex.cc`, `ned2.lex.h` | `FLEX_TARGET()` |
 | `msg2.y` | `msg2.tab.cc`, `msg2.tab.h` | `BISON_TARGET()` |
 | `msg2.lex` | `msg2.lex.cc`, `msg2.lex.h` | `FLEX_TARGET()` |
-| `../sim/sim_std.msg` | `sim_std_msg.cc` | `opp_msgtool` (built in sim, linked here) |
+| `../sim/sim_std.msg` | `sim_std_msg.cc` | `add_custom_command()` (embeds file as string constant) |
 | DTD files | `nedelements.cc/h`, `nedvalidator.cc/h` | `add_custom_command()` |
 
 ### src/sim/
@@ -288,10 +292,11 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release \
 | **Configure** | `cmake -B build` succeeds |
 | **Build** | `cmake --build build` completes with 0 errors |
 | **setenv** | `source build/setenv` succeeds, PATH updated |
-| **Library Inventory** | All 9 libraries built |
-| **Tool Inventory** | All tools built and executable |
+| **Library Inventory** | All 10 libraries built (including oppmain.a) |
+| **Tool Inventory** | All tools built and executable (except opp_charttool when WITH_SCAVE_PYTHON_BINDINGS=OFF) |
 | **opp_run Test** | `opp_run -h` succeeds |
 | **opp_configfilepath** | Returns `build/Makefile.inc` |
+| **opp_msgc** | `opp_msgc --help` works (calls opp_msgtool) |
 | **opp_makemake Test** | Build a sample simulation with opp_makemake |
 | **Sample Run** | Run the sample simulation successfully |
 
