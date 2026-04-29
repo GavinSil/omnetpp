@@ -7,6 +7,10 @@
 OMNeT++ is a C++ discrete event simulation framework. Version 6.4.0, branch `omnetpp-6.x`.
 License: Academic Public License.
 
+## Language Policy
+
+本项目中的所有文档、代码注释、git提交消息、AI会话统一使用中文。
+
 ## Quick Start
 
 ```bash
