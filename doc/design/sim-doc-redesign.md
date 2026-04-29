@@ -1,87 +1,6 @@
-# Draft: 仿真产品设计文档重新规划
+# 仿真产品设计文档
 
-## Critical Clarification (MUST READ)
-
-**重要澄清**：本文档是为 **一款新的仿真产品** 设计，而非为 OMNeT++ 写文档。
-- ❌ 文档中不要出现 "OMNeT++" 字样
-- ✅ 我们基于 OMNeT++ 技术栈，但产品有显著差异
-
-## 产品差异化设计
-
-| 特性 | 参考实现 | GS-S 仿真产品 |
-|------|---------------------|---------------|
-| 仿真模式 | 仅离散事件仿真 | **时间驱动 + 事件驱动** |
-| 应用领域 | 通用网络仿真 | **卫星通信网络 + 星载数据中心 + 星载算力节点** |
-| 文档定位 | 开源框架文档 | **产品级设计文档** |
-
-## Requirements (confirmed)
-- **问题识别**: 现有文档过于技术导向，缺乏产品视角
-- **期望方向**: 先描述仿真完整流程，再建立流程步骤与模块的映射关系
-- **仿真生命周期**: 场景搭建 → 对象建模 → 引擎加载 → 推演仿真 → 记录数据
-- **目标受众**: 混合受众 - 产品规划人员、技术决策者、模型开发者、内核贡献者
-- **产品代号**: GS-S
-- **应用领域**: 卫星通信网络、星载数据中心、星载算力节点
-- **差异化特性**: 时间驱动 + 事件驱动双模式
-- **时间驱动定义**: 固定时长步进，支持加速、暂停、减速功能
-- **必须包含**: 实战案例章节
-- **排除内容**: 仿真可信度评估（VV&A）章节、OMNeT++字样
-
-## Research Findings
-
-### 行业标准框架：VV&A
-- **验证**：确定仿真模型是否准确反映概念描述
-- **确认**：确定仿真模型是否正确代表被仿真对象
-- **认证**：权威鉴定仿真模型是否可接受
-
-### OMNeT++ 实际工作流程（从教程总结）
-1. 环境准备 → 创建工程 → 定义拓扑(NED) → 实现模块(C++) → 配置参数 → 运行仿真 → 分析结果
-
-### 三个视角对比
-
-| 用户视角（产品规划） | 开发者视角（OMNeT++教程） | 技术视角（内核实现） |
-|---------------------|--------------------------|---------------------|
-| 场景搭建 | 环境准备 + 创建工程 + 定义拓扑(NED) | NED解析器、类型系统 |
-| 对象建模 | 定义拓扑(NED) + 实现模块(C++) | 模块类型、消息定义、编译器 |
-| 引擎加载 | 配置参数 + 初始化 | 配置系统、模块实例化 |
-| 推演仿真 | 运行仿真 | 事件循环、调度器、FES |
-| 记录数据 | 分析结果 | 输出管理器、统计系统 |
-
-## Document Structure Decision
-
-**选择方案**: A（流程导向结构）
-
-### 最终文档结构
-
-```
-第一部分：仿真概览
-├── 1. 什么是离散事件仿真
-├── 2. 什么是时间驱动仿真
-├── 3. GS-S 仿真完整生命周期（流程图）
-└── 4. 混合仿真：时间驱动 + 事件驱动
-
-第二部分：仿真流程详解
-├── 1. 场景搭建（用户视角 → 开发者操作 → 技术模块）
-├── 2. 对象建模（用户视角 → 开发者操作 → 技术模块）
-├── 3. 引擎加载（用户视角 → 开发者操作 → 技术模块）
-├── 4. 推演仿真（用户视角 → 开发者操作 → 技术模块）
-└── 5. 记录数据（用户视角 → 开发者操作 → 技术模块）
-
-第三部分：实战案例
-├── 1. 搭建卫星网络仿真场景
-├── 2. 实现时间驱动与事件驱动混合仿真
-└── 3. 仿真加速、暂停、减速控制
-
-第四部分：技术架构参考（附录）
-├── 1. 子系统架构图
-├── 2. 核心类层次
-└── 3. API 概览
-```
-
-**关键修正**: 第一部分第4节聚焦"混合仿真"能力，而非模式对比选择
-
----
-
-## Draft Content: 第一部分 - 仿真概览
+## 第一部分 - 仿真概览
 
 ### 1.1 GS-S 仿真完整生命周期
 
@@ -93,12 +12,12 @@ flowchart LR
     B --> C[引擎加载]
     C --> D[推演仿真]
     D --> E[记录数据]
-    
-    style A fill:#e3f2fd
-    style B fill:#e8f5e9
-    style C fill:#fff3e0
-    style D fill:#fce4ec
-    style E fill:#f3e5f5
+
+    style A fill:#e3f2fd,stroke:#1976D2,color:#0D47A1
+    style B fill:#e8f5e9,stroke:#388E3C,color:#1B5E20
+    style C fill:#fff3e0,stroke:#F57C00,color:#E65100
+    style D fill:#fce4ec,stroke:#C2185B,color:#880E4F
+    style E fill:#f3e5f5,stroke:#7B1FA2,color:#4A148C
 ```
 
 **生命周期各阶段职责**：
@@ -202,7 +121,7 @@ flowchart LR
 
 ---
 
-## Draft Content: 第二部分 - 仿真流程详解
+## 第二部分 - 仿真流程详解
 
 ### 2.1 场景搭建
 
@@ -253,7 +172,7 @@ network SatelliteNetwork {
         int numOrbits = 6;       // 轨道平面数量
         int satsPerOrbit = 20;   // 每轨道卫星数量
         double coverageArea;     // 仿真覆盖区域
-        
+
     submodules:
         // 顶层对象：卫星星座
         constellation: Constellation {
@@ -268,21 +187,21 @@ network SatelliteNetwork {
                         satellite[satsPerOrbit]: SatelliteNode;
                 }
         }
-        
+
         // 顶层对象：地面网络
         groundNetwork: GroundNetwork {
             submodules:
                 groundStation[3]: GroundStation;  // 地面站
                 userTerminal[100]: UserTerminal;  // 用户终端
         }
-        
+
     connections:
         // 星间链路：同轨道前后连接
         for i=0..5, j=0..19 {
-            constellation.orbitPlane[i].satellite[j].isl[0] 
+            constellation.orbitPlane[i].satellite[j].isl[0]
                 <--> constellation.orbitPlane[i].satellite[(j+1)%20].isl[1];
         }
-        
+
         // 星地链路（动态，仿真中建立）
         // 跨轨道链路（动态，仿真中建立）
 }
@@ -386,11 +305,11 @@ simple SatelliteNode {
         double orbitAltitude;    // 轨道高度
         double orbitInclination; // 轨道倾角
         double orbitPeriod;      // 轨道周期
-        
+
         // 通信属性
         double antennaGain;      // 天线增益
         double linkBandwidth;    // 链路带宽
-        
+
         // 计算属性
         int cpuCores;            // CPU核心数
         double storageCapacity;  // 存储容量
@@ -409,18 +328,18 @@ module SatelliteNode {
         double orbitAltitude;
         double orbitInclination;
         double orbitPeriod;
-        
+
     gates:
         inout isl[4];   // 星间链路
         inout gsl[2];   // 星地链路
-        
+
     submodules:
         // 分系统模块
         communicationPayload: CommunicationPayload;  // 通信载荷
         computingUnit: ComputingUnit;                 // 计算单元
         powerSystem: PowerSystem;                     // 电源系统
         attitudeControl: AttitudeControl;             // 姿态控制
-        
+
     connections:
         // 分系统间连接
         communicationPayload.dataOut --> computingUnit.dataIn;
@@ -457,17 +376,17 @@ private:
     // 轨道计算（时间驱动）
     Position position;
     Message *orbitTimer;
-    
+
 protected:
     virtual void initialize() override {
         // 初始化属性
         orbitPeriod = par("orbitPeriod");
-        
+
         // 启动周期任务
         orbitTimer = new Message("orbitTimer");
         scheduleAt(0, orbitTimer);
     }
-    
+
     virtual void handleMessage(Message *msg) override {
         if (msg == orbitTimer) {
             updateOrbit();  // 时间驱动：更新轨道位置
@@ -636,14 +555,14 @@ void Simulation::run() {
     while (!terminated) {
         // 取下一事件（驱动对象）
         Message *msg = fes.pop();
-        
+
         // 推进仿真时间
         simTime = msg->getArrivalTime();
-        
+
         // 触发对象处理（驱动）
         Module *target = msg->getDestinationModule();
         target->handleMessage(msg);  // 驱动对象运行
-        
+
         // 对象间同步（通过消息传递）
         // 对象在handleMessage中可能发送消息到其他对象
         // 其他对象收到消息后更新状态（同步）
@@ -655,11 +574,11 @@ void SatelliteNode::handleMessage(Message *msg) {
     if (msg->isSelfMessage() && msg->getKind() == ORBIT_UPDATE) {
         // 时间驱动：轨道更新
         updateOrbit();              // 更新自身状态
-        
+
         // 数据同步：通知相关对象
         notifyGroundStations();    // 通知地面站可见性变化
         notifyNeighborSatellites(); // 通知邻居卫星链路状态
-        
+
         scheduleAt(simTime() + 1s, msg);
     } else if (msg->isPacket()) {
         // 事件驱动：数据包处理
@@ -757,7 +676,7 @@ emit(utilizationSignal, link->getUtilization());
 
 ---
 
-## Draft Content: 第三部分 - 实战案例
+## 第三部分 - 实战案例
 
 ### 3.1 搭建卫星网络仿真场景
 
@@ -807,18 +726,18 @@ class SatelliteNode : public Module {
 private:
     double orbitPeriod;      // 轨道周期
     Position position;       // 当前位置
-    
+
 protected:
     virtual void initialize() override {
         // 初始化轨道参数
         orbitPeriod = par("orbitPeriod");
-        
+
         // 注册轨道更新定时器（时间驱动）
         Message *timer = new Message("orbitTimer");
         timer->setKind(ORBIT_UPDATE);
         scheduleAt(0, timer);
     }
-    
+
     virtual void handleMessage(Message *msg) override {
         if (msg->isSelfMessage() && msg->getKind() == ORBIT_UPDATE) {
             // 轨道更新（时间驱动，每1秒）
@@ -829,15 +748,15 @@ protected:
             processPacket(check_and_cast<Packet*>(msg));
         }
     }
-    
+
     void updateOrbitPosition() {
         // 计算新的卫星位置
         double elapsed = simTime().dbl() / orbitPeriod;
         position = computeOrbitPosition(elapsed);
-        
+
         // 更新可见地面站列表
         updateVisibleGroundStations();
-        
+
         // 更新星间链路状态
         updateInterSatelliteLinks();
     }
@@ -918,29 +837,29 @@ flowchart TD
         A5 --> A7[进入仿真循环]
         A6 --> A7
     end
-    
+
     subgraph 仿真循环
         A7 --> B1[取下一事件]
         B1 --> B2{事件类型判断}
-        
+
         B2 -->|时间步事件| C1[推进到时间步边界]
         C1 --> C2[触发所有时间驱动对象]
         C2 --> C3[更新轨道位置]
         C3 --> C4[更新链路状态]
         C4 --> C5[安排下一时间步事件]
         C5 --> B1
-        
+
         B2 -->|数据包事件| D1[推进到事件时刻]
         D1 --> D2[触发目标对象处理]
         D2 --> D3[转发数据包]
         D3 --> D4[安排到达事件]
         D4 --> B1
-        
+
         B2 -->|其他事件| E1[推进到事件时刻]
         E1 --> E2[触发目标对象处理]
         E2 --> B1
     end
-    
+
     subgraph 结束阶段
         B1 --> F1{仿真时间到达?}
         F1 -->|否| B2
@@ -949,11 +868,41 @@ flowchart TD
         F3 --> F4[输出结果文件]
         F4 --> F5[仿真结束]
     end
-    
-    style C1 fill:#e3f2fd
-    style C2 fill:#e3f2fd
-    style D1 fill:#fff3e0
-    style D2 fill:#fff3e0
+
+    %% 初始化阶段 - 蓝色系
+    style A1 fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+    style A2 fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+    style A3 fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+    style A4 fill:#e3f2fd,stroke:#1976D2,color:#0D47A1
+    style A5 fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+    style A6 fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+    style A7 fill:#90caf9,stroke:#1976D2,color:#0D47A1
+
+    %% 时间驱动分支 - 绿色系
+    style B2 fill:#e8f5e9,stroke:#388E3C,color:#1B5E20
+    style C1 fill:#c8e6c9,stroke:#388E3C,color:#1B5E20
+    style C2 fill:#c8e6c9,stroke:#388E3C,color:#1B5E20
+    style C3 fill:#a5d6a7,stroke:#388E3C,color:#1B5E20
+    style C4 fill:#a5d6a7,stroke:#388E3C,color:#1B5E20
+    style C5 fill:#c8e6c9,stroke:#388E3C,color:#1B5E20
+
+    %% 事件驱动分支 - 橙色系
+    style D1 fill:#ffe0b2,stroke:#F57C00,color:#E65100
+    style D2 fill:#ffe0b2,stroke:#F57C00,color:#E65100
+    style D3 fill:#ffcc80,stroke:#F57C00,color:#E65100
+    style D4 fill:#ffe0b2,stroke:#F57C00,color:#E65100
+
+    %% 其他事件分支 - 紫色系
+    style E1 fill:#e1bee7,stroke:#7B1FA2,color:#4A148C
+    style E2 fill:#e1bee7,stroke:#7B1FA2,color:#4A148C
+
+    %% 结束阶段 - 粉色系
+    style B1 fill:#fce4ec,stroke:#C2185B,color:#880E4F
+    style F1 fill:#f8bbd9,stroke:#C2185B,color:#880E4F
+    style F2 fill:#f8bbd9,stroke:#C2185B,color:#880E4F
+    style F3 fill:#f8bbd9,stroke:#C2185B,color:#880E4F
+    style F4 fill:#f8bbd9,stroke:#C2185B,color:#880E4F
+    style F5 fill:#f48fb1,stroke:#C2185B,color:#880E4F
 ```
 
 ---
@@ -990,11 +939,11 @@ class SimulationControl {
 public:
     // 速度控制
     void setSpeedFactor(double factor);  // 1.0=实时，2.0=2倍速
-    
+
     // 暂停/恢复
     void pause();
     void resume();
-    
+
     // 状态查询
     double getCurrentSpeed();
     bool isPaused();
@@ -1015,10 +964,10 @@ void Simulation::run() {
             waitForResume();  // 阻塞等待恢复命令
             continue;
         }
-        
+
         // 取下一事件
         Message *msg = fes.pop();
-        
+
         // 时间推进（考虑速度因子）
         SimTime targetTime = msg->getArrivalTime();
         if (speedFactor != INFINITE_SPEED) {
@@ -1026,10 +975,10 @@ void Simulation::run() {
             double realDelay = (targetTime - simTime) / speedFactor;
             waitForRealTime(realDelay);
         }
-        
+
         // 推进仿真时间
         simTime = targetTime;
-        
+
         // 执行事件
         msg->getDestinationModule()->handleMessage(msg);
     }
@@ -1056,7 +1005,7 @@ void Simulation::run() {
 
 ---
 
-## Draft Content: 第四部分 - 技术架构参考（附录）
+## 第四部分 - 技术架构参考（附录）
 
 > 本部分为内核贡献者提供技术细节参考，作为第二部分的补充。
 
@@ -1064,55 +1013,80 @@ void Simulation::run() {
 
 ```mermaid
 graph TB
-    subgraph 用户界面层
+    subgraph UI["用户界面层"]
         CMDENV[cmdenv]
         QTENV[qtenv]
     end
-    
-    subgraph 运行环境层[envir]
-        CONFIG[配置系统<br/>SectionBasedConfiguration]
-        OUTPUT[输出管理器<br/>结果文件]
-        LOG[事件日志<br/>eventlog]
+
+    subgraph ENVIR["运行环境层 envir"]
+        CONFIG["配置系统<br/>SectionBasedConfiguration"]
+        OUTPUT["输出管理器<br/>结果文件"]
+        LOG["事件日志<br/>eventlog"]
     end
-    
-    subgraph 仿真内核层[sim]
-        SIM[仿真内核<br/>cSimulation]
-        SCHED[调度器<br/>cScheduler]
-        MODULE[模块系统<br/>cModule/cSimpleModule]
-        MSG[消息系统<br/>cMessage/cPacket]
+
+    subgraph SIM["仿真内核层 sim"]
+        SIMCORE["仿真内核<br/>cSimulation"]
+        SCHED["调度器<br/>cScheduler"]
+        MODULE["模块系统<br/>cModule/cSimpleModule"]
+        MSG["消息系统<br/>cMessage/cPacket"]
     end
-    
-    subgraph 网络构建层[netbuilder]
-        NEDLOAD[NED加载器<br/>cNedLoader]
-        NETBUILD[网络构建器<br/>cNedNetworkBuilder]
-        DYNTYPE[动态类型<br/>cDynamicModuleType]
+
+    subgraph NETBUILD["网络构建层 netbuilder"]
+        NEDLOAD["NED加载器<br/>cNedLoader"]
+        NETBUILDER["网络构建器<br/>cNedNetworkBuilder"]
+        DYNTYPE["动态类型<br/>cDynamicModuleType"]
     end
-    
-    subgraph NED解析层[nedxml]
-        NEDPARSER[NED解析器<br/>NedParser]
-        NEDTYPE[NED类型系统<br/>NedTypeInfo]
-        NEDCACHE[NED资源缓存<br/>NedResourceCache]
+
+    subgraph NEDXML["NED解析层 nedxml"]
+        NEDPARSER["NED解析器<br/>NedParser"]
+        NEDTYPE["NED类型系统<br/>NedTypeInfo"]
+        NEDCACHE["NED资源缓存<br/>NedResourceCache"]
     end
-    
+
     CMDENV --> CONFIG
     QTENV --> CONFIG
-    
-    CONFIG --> SIM
-    OUTPUT --> SIM
-    LOG --> SIM
-    
-    SIM --> SCHED
-    SIM --> MODULE
+
+    CONFIG --> SIMCORE
+    OUTPUT --> SIMCORE
+    LOG --> SIMCORE
+
+    SIMCORE --> SCHED
+    SIMCORE --> MODULE
     MODULE --> MSG
-    
-    SIM --> NEDLOAD
-    NEDLOAD --> NETBUILD
-    NETBUILD --> DYNTYPE
+
+    SIMCORE --> NEDLOAD
+    NEDLOAD --> NETBUILDER
+    NETBUILDER --> DYNTYPE
     DYNTYPE --> MODULE
-    
+
     NEDLOAD --> NEDCACHE
     NEDCACHE --> NEDTYPE
     NEDPARSER --> NEDCACHE
+
+    %% 用户界面层 - 粉色系
+    style CMDENV fill:#f8bbd9,stroke:#C2185B,color:#880E4F
+    style QTENV fill:#f8bbd9,stroke:#C2185B,color:#880E4F
+
+    %% 运行环境层 - 蓝色系
+    style CONFIG fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+    style OUTPUT fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+    style LOG fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+
+    %% 仿真内核层 - 绿色系
+    style SIMCORE fill:#c8e6c9,stroke:#388E3C,color:#1B5E20
+    style SCHED fill:#c8e6c9,stroke:#388E3C,color:#1B5E20
+    style MODULE fill:#a5d6a7,stroke:#388E3C,color:#1B5E20
+    style MSG fill:#a5d6a7,stroke:#388E3C,color:#1B5E20
+
+    %% 网络构建层 - 橙色系
+    style NEDLOAD fill:#ffe0b2,stroke:#F57C00,color:#E65100
+    style NETBUILDER fill:#ffe0b2,stroke:#F57C00,color:#E65100
+    style DYNTYPE fill:#ffcc80,stroke:#F57C00,color:#E65100
+
+    %% NED解析层 - 紫色系
+    style NEDPARSER fill:#e1bee7,stroke:#7B1FA2,color:#4A148C
+    style NEDTYPE fill:#e1bee7,stroke:#7B1FA2,color:#4A148C
+    style NEDCACHE fill:#ce93d8,stroke:#7B1FA2,color:#4A148C
 ```
 
 **子系统职责说明**：
@@ -1130,34 +1104,274 @@ graph TB
 
 #### 模块类型层次
 
+```mermaid
+classDiagram
+    direction TB
+
+    class cComponentType {
+        <<abstract>>
+        #string name
+        #string qualifiedName
+        +create(name, parent) cComponent*
+        +getName() string
+        +getQualifiedName() string
+    }
+
+    class cModuleType {
+        <<abstract>>
+        #bool isSimple
+        +create(name, parent) cModule*
+        +createSubmodules(parent)
+        +connectGates(parent)
+    }
+
+    class cSimpleModuleType {
+        -CreateModuleFunc factory
+        +create(name, parent) cModule* override
+    }
+
+    class cDynamicModuleType {
+        -NedTypeInfo* nedType
+        +create(name, parent) cModule* override
+        -setupParams(module)
+        -setupGates(module)
+    }
+
+    class cChannelType {
+        <<abstract>>
+        +create(name) cChannel*
+        +setupChannel(channel)
+    }
+
+    class cDynamicChannelType {
+        -NedTypeInfo* nedType
+        +create(name) cChannel* override
+    }
+
+    cComponentType <|-- cModuleType
+    cComponentType <|-- cChannelType
+    cModuleType <|-- cSimpleModuleType
+    cModuleType <|-- cDynamicModuleType
+    cChannelType <|-- cDynamicChannelType
+
+    cDynamicModuleType --> NedTypeInfo : uses
+    cDynamicChannelType --> NedTypeInfo : uses
+
+    note for cSimpleModuleType "C++实现的模块\n由Define_Module注册"
+    note for cDynamicModuleType "从NED创建的模块\n支持参数和门配置"
+
+    %% 颜色样式 (Material Design)
+    class cComponentType:::abstractStyle
+    class cModuleType:::abstractStyle
+    class cChannelType:::abstractStyle
+    class cSimpleModuleType:::implStyle
+    class cDynamicModuleType:::implStyle
+    class cDynamicChannelType:::implStyle
+
+    classDef abstractStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+    classDef implStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
 ```
-cComponentType (抽象基类)
-├── cModuleType (模块类型)
-│   ├── cSimpleModuleType (简单模块类型)
-│   └── cDynamicModuleType (动态模块类型，从NED创建)
-└── cChannelType (通道类型)
-    └── cDynamicChannelType (动态通道类型)
+
+#### 网络构建层类图
+
+```mermaid
+classDiagram
+    direction TB
+
+    class cNedLoader {
+        -NedResourceCache* nedCache
+        -vector~string~ loadedFolders
+        +loadNedFiles(path)
+        +getModuleType(name) cModuleType*
+        +getChannelType(name) cChannelType*
+        +reconnectComponentTypes()
+    }
+
+    class cNedNetworkBuilder {
+        -cSimulation* simulation
+        -cNedLoader* loader
+        +setupNetwork(networkName)
+        +buildModule(moduleType, name, parent) cModule*
+        -createSubmodules(module)
+        -createConnections(module)
+    }
+
+    class cDynamicModuleType {
+        -NedTypeInfo* nedType
+        -string name
+        +create(name, parent) cModule*
+        -setupParameters(module)
+        -setupGates(module)
+        -buildInside(module)
+    }
+
+    class NedTypeInfo {
+        -string name
+        -string extends
+        -map~string,ParamInfo~ params
+        -map~string,GateInfo~ gates
+        -vector~SubmoduleInfo~ submodules
+        +getParam(name) ParamInfo*
+        +getGate(name) GateInfo*
+        +getSubmodules() vector
+    }
+
+    class NedResourceCache {
+        -map~string,NedTypeInfo*~ types
+        +registerType(typeInfo)
+        +lookup(name) NedTypeInfo*
+    }
+
+    cNedLoader --> NedResourceCache : manages
+    cNedLoader --> cDynamicModuleType : creates
+    cNedNetworkBuilder --> cNedLoader : uses
+    cNedNetworkBuilder --> cSimulation : populates
+    cDynamicModuleType --> NedTypeInfo : wraps
+
+    note for cNedLoader "加载NED文件\n注册模块/通道类型"
+    note for cNedNetworkBuilder "根据NED定义\n递归构建模块树"
+
+    %% 颜色样式 (Material Design)
+    class cNedLoader:::loaderStyle
+    class cNedNetworkBuilder:::builderStyle
+    class cDynamicModuleType:::typeStyle
+    class NedTypeInfo:::infoStyle
+    class NedResourceCache:::cacheStyle
+
+    classDef loaderStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+    classDef builderStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef typeStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+    classDef infoStyle fill:#F3E5F5,stroke:#4A148C,color:#4A148C
+    classDef cacheStyle fill:#E1F5FE,stroke:#01579B,color:#01579B
 ```
 
 #### 模块实例层次
 
-```
-cComponent (组件基类)
-├── cModule (模块基类)
-│   ├── cSimpleModule (简单模块，实现行为)
-│   └── [复合模块实例] (cModule子类，组织结构)
-└── cChannel (通道基类)
-    ├── cDatarateChannel (数据率通道)
-    └── [自定义通道]
+```mermaid
+classDiagram
+    direction TB
+
+    class cComponent {
+        <<abstract>>
+        #cComponentType* type
+        #string name
+        #int id
+        +initialize(stage)
+        +finish()
+        +getName() string
+        +getFullName() string
+        +getFullPath() string
+    }
+
+    class cModule {
+        <<abstract>>
+        #cModule* parentModule
+        #cGate** gates
+        #cPar* parameters
+        +gate(name, index) cGate*
+        +par(name) cPar&
+        +getParentModule() cModule*
+        +getSubmodule(name) cModule*
+        +scheduleAt(time, msg)
+        +send(msg, gate)
+        +sendDelayed(msg, delay, gate)
+    }
+
+    class cSimpleModule {
+        -coroutine_t coroutine
+        -cMessage* msgForActivity
+        +handleMessage(cMessage*)
+        +activity()
+        +usesActivity() bool
+    }
+
+    class cChannel {
+        <<abstract>>
+        -cModule* sourceModule
+        -cGate* sourceGate
+        +processMessage(msg, time) ChannelResult
+        +isTransmissionChannel() bool
+    }
+
+    class cDatarateChannel {
+        -double datarate
+        -double delay
+        -double ber
+        -double per
+        +getDatarate() double
+        +getDelay() double
+        +setDatarate(rate)
+    }
+
+    cComponent <|-- cModule
+    cComponent <|-- cChannel
+    cModule <|-- cSimpleModule
+    cChannel <|-- cDatarateChannel
+
+    note for cSimpleModule "两种编程风格:\nhandleMessage() 或 activity()"
+    note for cDatarateChannel "支持带宽、延迟、误码率配置"
+
+    %% 颜色样式 (Material Design)
+    class cComponent:::abstractStyle
+    class cModule:::moduleStyle
+    class cSimpleModule:::implStyle
+    class cChannel:::channelStyle
+    class cDatarateChannel:::implStyle
+
+    classDef abstractStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+    classDef moduleStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+    classDef implStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef channelStyle fill:#F3E5F5,stroke:#4A148C,color:#4A148C
 ```
 
 #### 消息层次
 
-```
-cMessage (消息基类)
-├── cPacket (数据包，携带数据)
-│   ├── [自定义数据包类型]
-└── [自消息] (定时器，模块发给自己的消息)
+```mermaid
+classDiagram
+    direction TB
+
+    class cMessage {
+        -string name
+        -short kind
+        -int senderModuleId
+        -int senderGateId
+        -int targetModuleId
+        -int targetGateId
+        -simtime_t creationTime
+        -simtime_t sendTime
+        -simtime_t arrivalTime
+        -void* contextPointer
+        -cObject* controlInfo
+        +execute()
+        +isSelfMessage() bool
+        +isPacket() bool
+        +getArrivalTime() simtime_t
+    }
+
+    class cPacket {
+        -int64_t bitLength
+        -simtime_t duration
+        -bool bitError
+        -cPacket* encapsulatedPacket
+        +getBitLength() int64_t
+        +setBitLength(len)
+        +getDuration() simtime_t
+        +hasBitError() bool
+        +encapsulate(pkt)
+        +decapsulate() cPacket*
+    }
+
+    cMessage <|-- cPacket
+
+    note for cMessage "定时器 = self message\n发给自己的消息"
+    note for cPacket "数据包支持封装\n用于协议层次建模"
+
+    %% 颜色样式 (Material Design)
+    class cMessage:::msgStyle
+    class cPacket:::pktStyle
+
+    classDef msgStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef pktStyle fill:#FFEBEE,stroke:#B71C1C,color:#B71C1C
 ```
 
 ---
@@ -1230,14 +1444,14 @@ struct Event {
 // 高精度时间表示
 class SimTime {
     int64_t value;          // 内部值（单位取决于精度设置）
-    
+
     // 支持运算
     SimTime operator+(SimTime t);
     SimTime operator-(SimTime t);
-    
+
     // 支持比较
     bool operator<(SimTime t);
-    
+
     // 转换方法
     double dbl();           // 转换为 double（秒）
     std::string str();      // 字符串表示（如 "1.5s"）
@@ -1252,12 +1466,12 @@ class cPar {
     enum Type {
         BOOL, DOUBLE, INT, STRING, OBJECT
     };
-    
+
     // 类型转换
     double doubleValue();
     int intValue();
     std::string stringValue();
-    
+
     // 表达式计算
     void parse(const char* text);  // 解析表达式
     void evaluate();               // 计算值
@@ -1313,6 +1527,124 @@ extends = General
 
 sim 子系统是 GS-S 仿真引擎的核心实现，位于 `src/sim/` 目录。该子系统负责离散事件仿真的核心功能实现。
 
+#### 核心类图
+
+```mermaid
+classDiagram
+    direction TB
+
+    class cSimulation {
+        -cEnvir* envir
+        -cScheduler* scheduler
+        -cModule* systemModule
+        -cFutureEventSet* fes
+        -simtime_t simTime
+        +executeEvent(cEvent*)
+        +run()
+        +getModule(id) cModule*
+        +setupNetwork(networkType)
+    }
+
+    class cComponent {
+        <<abstract>>
+        inherits cSoftOwner
+        #cComponentType* type
+        #std::string name
+        +initialize(stage)
+        +finish()
+    }
+
+    class cModule {
+        <<abstract>>
+        #cModule* parentModule
+        #cGate** gates
+        #cPar* params
+        +gate(name) cGate*
+        +par(name) cPar&
+        +scheduleAt(time, msg)
+        +send(msg, gate)
+    }
+
+    class cSimpleModule {
+        -coroutine_t coroutine
+        +handleMessage(cMessage*)
+        +activity()
+        +initialize(stage) override
+    }
+
+    class cMessage {
+        -simtime_t sendTime
+        -simtime_t arrivalTime
+        -int senderModuleId
+        -int targetModuleId
+        +execute()
+        +getArrivalTime() simtime_t
+    }
+
+    class cPacket {
+        -int64_t bitLength
+        -simtime_t duration
+        -bool bitError
+        -cPacket* encapsulatedPacket
+        +encapsulate(pkt)
+        +decapsulate() cPacket*
+    }
+
+    class cEvent {
+        <<abstract>>
+        inherits cOwnedObject
+        +execute()
+    }
+
+    class cScheduler {
+        <<abstract>>
+        +startRun()
+        +endRun()
+        +getNextEvent() cEvent*
+    }
+
+    class cFutureEventSet {
+        inherits cOwnedObject
+        +insert(cEvent*)
+        +remove(cEvent*)
+        +peek() cEvent*
+        +pop() cEvent*
+    }
+
+    cSimulation --> cScheduler : uses
+    cSimulation --> cFutureEventSet : manages
+    cSimulation --> cModule : contains
+
+    cComponent <|-- cModule
+    cModule <|-- cSimpleModule
+
+    cEvent <|-- cMessage
+    cMessage <|-- cPacket
+
+    cSimulation --> cEvent : executes
+
+    %% 颜色样式 (Material Design)
+    class cSimulation:::simStyle
+    class cComponent:::abstractStyle
+    class cModule:::moduleStyle
+    class cSimpleModule:::implStyle
+    class cMessage:::msgStyle
+    class cPacket:::pktStyle
+    class cEvent:::eventStyle
+    class cScheduler:::schedStyle
+    class cFutureEventSet:::fesStyle
+
+    classDef simStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+    classDef abstractStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+    classDef moduleStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef implStyle fill:#E1F5FE,stroke:#01579B,color:#01579B
+    classDef msgStyle fill:#F3E5F5,stroke:#4A148C,color:#4A148C
+    classDef pktStyle fill:#FFEBEE,stroke:#B71C1C,color:#B71C1C
+    classDef eventStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef schedStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+    classDef fesStyle fill:#E1F5FE,stroke:#01579B,color:#01579B
+```
+
 #### 事件循环流程
 
 sim 子系统的事件循环是仿真执行的核心驱动力。仿真管理器 `cSimulation` 负责协调事件调度、模块执行和状态推进。
@@ -1324,13 +1656,13 @@ void cSimulation::executeEvent(cEvent *event)
 {
     // 1. 增加事件计数
     currentEventNumber++;
-    
+
     // 2. 推进仿真时间
     currentSimtime = event->getArrivalTime();
-    
+
     // 3. 通知环境（写入事件日志等）
     EVCB.simulationEvent(event);
-    
+
     // 4. 执行事件
     event->execute();
 }
@@ -1344,7 +1676,7 @@ void cMessage::execute()
     // 获取目标模块
     cSimpleModule *module = check_and_cast<cSimpleModule *>(
         getSimulation()->getModule(targetModuleId));
-    
+
     // 调用模块的消息处理
     module->doMessageEvent(this);
 }
@@ -1396,21 +1728,21 @@ void cModule::deleteModule()
 {
     // 1. 递归调用 preDelete()
     callPreDelete(this);
-    
+
     // 2. 删除子模块
     for (auto submodule : submodules)
         submodule->deleteModule();
-    
+
     // 3. 删除门和连接
     clearGates();
-    
+
     // 4. 从父模块移除
     if (parentModule)
         parentModule->removeSubmodule(this);
-    
+
     // 5. 从仿真注销
     simulation->deregisterComponent(this);
-    
+
     // 6. 删除对象
     delete this;
 }
@@ -1420,6 +1752,71 @@ void cModule::deleteModule()
 
 消息发送是仿真模型中最基本的交互方式。系统支持多种发送模式和消息类型。
 
+**消息类图：**
+
+```mermaid
+classDiagram
+    direction TB
+
+    class cMessage {
+        <<event>>
+        -const char* name
+        -short kind
+        -int senderModuleId
+        -int senderGateId
+        -int targetModuleId
+        -int targetGateId
+        -simtime_t creationTime
+        -simtime_t sendTime
+        -simtime_t timestamp
+        -void* contextPointer
+        -cObject* controlInfo
+        +execute()
+        +isSelfMessage() bool
+        +isPacket() bool
+        +getArrivalTime() simtime_t
+        +getSenderModule() cModule*
+    }
+
+    class cPacket {
+        -int64_t bitLength
+        -simtime_t duration
+        -bool bitError
+        -cPacket* encapsulatedPacket
+        +getBitLength() int64_t
+        +getDuration() simtime_t
+        +hasBitError() bool
+        +encapsulate(pkt)
+        +decapsulate() cPacket*
+        +getEncapsulatedPacket() cPacket*
+    }
+
+    class cEvent {
+        <<abstract>>
+        +execute()
+        +getArrivalTime() simtime_t
+    }
+
+    class cMessage {
+        <<event>>
+    }
+
+    cEvent <|-- cMessage
+    cMessage <|-- cPacket
+
+    note for cMessage "定时器是发给自己的消息\nisSelfMessage() == true"
+    note for cPacket "数据包携带实际数据\n支持协议封装层次"
+
+    %% 颜色样式 (Material Design)
+    class cMessage:::msgStyle
+    class cPacket:::pktStyle
+    class cEvent:::eventStyle
+
+    classDef msgStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef pktStyle fill:#FFEBEE,stroke:#B71C1C,color:#B71C1C
+    classDef eventStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+```
+
 **消息属性结构：**
 
 ```cpp
@@ -1427,18 +1824,18 @@ class cMessage {
     // 基本信息
     const char *name;           // 消息名称
     short kind;                 // 消息类型（用户定义）
-    
+
     // 发送信息
     int senderModuleId;         // 发送模块 ID
     int senderGateId;           // 发送门 ID
     int targetModuleId;         // 目标模块 ID
     int targetGateId;           // 目标门 ID（-1 表示自消息）
-    
+
     // 时间信息
     simtime_t creationTime;     // 创建时间
     simtime_t sendTime;         // 发送时间
     simtime_t timestamp;        // 用户时间戳
-    
+
     // 辅助
     void *contextPointer;       // 上下文指针（用于定时器）
     cObject *controlInfo;       // 控制信息（协议层间通信）
@@ -1452,14 +1849,98 @@ class cPacket : public cMessage {
     int64_t bitLength;          // 比特长度
     simtime_t duration;         // 传输持续时间
     bool bitError;              // 比特错误标志
-    
+
     cPacket *encapsulatedPacket; // 封装的数据包
-    
+
     // 封装/解封装
     void encapsulate(cPacket *pkt);
     cPacket *decapsulate();
 };
 ```
+#### cObject 类层次
+
+OMNeT++ 的所有核心类都继承自 `cObject`，形成一个统一的类层次结构。理解这个层次对于理解整个框架至关重要。
+
+```mermaid
+classDiagram
+    direction TB
+
+    class cObject {
+        <<root>>
+        +getName() const char*
+        +getFullName() const char*
+        +getFullPath() string
+        +getClassName() const char*
+        +getOwner() cObject*
+        +dup() cObject*
+        +str() string
+        +forEachChild(cVisitor*)
+        +take(cOwnedObject*)
+        +drop(cOwnedObject*)
+    }
+
+    class cNamedObject {
+        -const char* name
+        -uint32_t flags
+        +setName(s)
+        +getNamePooling() bool
+    }
+
+    class cOwnedObject {
+        -cObject* owner
+        -unsigned int pos
+        +getOwner() cObject*
+        +isOwnedObject() bool
+        +getTotalObjectCount() long
+        +getLiveObjectCount() long
+    }
+
+    class cNoncopyableOwnedObject {
+        +dup() throws error
+    }
+
+    class cSoftOwner {
+        -cOwnedObject** objs
+        -int numObjs
+        -int capacity
+        +isSoftOwner() bool
+        +getNumOwnedObjects() int
+        +getOwnedObject(k) cOwnedObject*
+        +take(cOwnedObject*)
+        +drop(cOwnedObject*)
+    }
+
+    %% 继承关系
+    cObject <|-- cNamedObject
+    cNamedObject <|-- cOwnedObject
+    cOwnedObject <|-- cNoncopyableOwnedObject
+    cNoncopyableOwnedObject <|-- cSoftOwner
+
+    %% 颜色样式 (Material Design)
+    class cObject:::rootStyle
+    class cNamedObject:::namedStyle
+    class cOwnedObject:::ownedStyle
+    class cNoncopyableOwnedObject:::noncopyStyle
+    class cSoftOwner:::softStyle
+
+    classDef rootStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20,stroke-width:3px
+    classDef namedStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+    classDef ownedStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef noncopyStyle fill:#F3E5F5,stroke:#4A148C,color:#4A148C
+    classDef softStyle fill:#E1F5FE,stroke:#01579B,color:#01579B
+```
+
+**类层次说明：**
+
+| 类名 | 作用 | 关键特性 |
+|------|------|----------|
+| `cObject` | 所有类的根基类 | 无数据成员，提供 name、owner、dup 等虚函数 |
+| `cNamedObject` | 增加名称字段 | 存储对象名，支持名称池优化 |
+| `cOwnedObject` | 增加所有权管理 | 维护 owner 指针，跟踪对象生命周期统计 |
+| `cNoncopyableOwnedObject` | 禁止复制 | 禁用 copy constructor 和 assignment |
+| `cSoftOwner` | 软所有权容器 | 允许其他对象取走其拥有的对象（模块基类） |
+
+**所有权机制：** `cOwnedObject` 的所有权机制防止对象被多处同时引用，避免内存管理错误。当对象插入容器时，容器成为其 owner；删除时需要 owner 的许可。
 
 #### 统计基础设施
 
@@ -1472,6 +1953,95 @@ GS-S 仿真系统采用信号机制实现模块化的统计收集。模块通过
 3. 模块调用 `emit(signalID, value)` 发射信号
 4. 信号经过过滤器链处理
 5. 记录器将结果写入输出文件
+
+**信号机制类图：**
+
+```mermaid
+classDiagram
+    direction TB
+
+    class cComponent {
+        +registerSignal(name) simsignal_t
+        +emit(signal, value)
+        +subscribe(signal, listener)
+    }
+
+    class cResultListener {
+        <<abstract>>
+        +receiveSignal(source, signalID, value, details)
+        +finish()
+    }
+
+    class cResultRecorder {
+        <<abstract>>
+        #std::string resultName
+        +receiveSignal(...) override
+        +finish() override
+        #record()*
+    }
+
+    class cStatistic {
+        <<abstract>>
+        #int64_t count
+        +collect(value)
+        +getCount() int64_t
+        +getMean() double
+    }
+
+    class cStdDev {
+        -double min, max
+        -double sum, sumSqr
+        +getMean() double
+        +getStddev() double
+        +getVariance() double
+        +getMin() double
+        +getMax() double
+    }
+
+    class cHistogram {
+        -Bin* bins
+        -int numBins
+        +getNumBins() int
+        +getBinValue(k) int64_t
+        +getBinEdge(k) double
+    }
+
+    class cResultFilter {
+        <<abstract>>
+        -cResultListener* listener
+        +receiveSignal(...)
+        +setListener(listener)
+    }
+
+    cResultListener <|-- cResultRecorder
+    cResultListener <|-- cResultFilter
+    cResultRecorder <|-- cStatistic
+
+    cStatistic <|-- cStdDev
+    cStdDev <|-- cHistogram
+
+    cComponent --> cResultListener : subscribes
+    cResultFilter --> cResultListener : forwards to
+
+    note for cResultFilter "可选的信号处理链\n如: warmup过滤、单位转换"
+
+    %% 颜色样式 (Material Design)
+    class cComponent:::compStyle
+    class cResultListener:::listenerStyle
+    class cResultRecorder:::recorderStyle
+    class cStatistic:::statStyle
+    class cStdDev:::stddevStyle
+    class cHistogram:::histStyle
+    class cResultFilter:::filterStyle
+
+    classDef compStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+    classDef listenerStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+    classDef recorderStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef statStyle fill:#F3E5F5,stroke:#4A148C,color:#4A148C
+    classDef stddevStyle fill:#E1F5FE,stroke:#01579B,color:#01579B
+    classDef histStyle fill:#FFEBEE,stroke:#B71C1C,color:#B71C1C
+    classDef filterStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+```
 
 **统计类层次：**
 
@@ -1589,7 +2159,7 @@ simsignal_t mySignal = cComponent::registerSignal("mySignal");
 class MyModule : public cSimpleModule {
   protected:
     virtual int numInitStages() const override { return 3; }
-    
+
     virtual void initialize(int stage) override {
         switch (stage) {
             case 0: initPhase1(); break;
@@ -1611,6 +2181,114 @@ class MyModule : public cSimpleModule {
 ### 5.2 envir 子系统详细设计
 
 envir 子系统是 GS-S 仿真框架的运行环境管理层，作为仿真内核与用户界面层之间的桥梁。
+
+#### 核心类图
+
+```mermaid
+classDiagram
+    direction TB
+
+    class cEnvir {
+        <<abstract>>
+        #cConfiguration* cfg
+        +log(msg)
+        +printf(format, ...)
+        +recordScalar(name, value)
+        +recordStatistic(...)
+        +alert(msg)
+        +askYesNo(prompt) bool
+    }
+
+    class cConfiguration {
+        <<abstract>>
+        +getAsString(key) string
+        +getAsBool(key) bool
+        +getAsInt(key) int
+        +getAsDouble(key) double
+        +getEntriesWithPrefix(prefix) vector
+    }
+
+    class cConfigurationEx {
+        +getConfigValue(key) const char*
+        +getParameterValue(path, param) const char*
+        +getNetworkName() string
+        +getSimTimeLimit() simtime_t
+    }
+
+    class SectionBasedConfiguration {
+        -cConfigurationReader* reader
+        -string activeConfig
+        -int runNumber
+        +setConfigurationReader(reader)
+        +setActiveConfig(name)
+        +getIterationVariable(name) string
+    }
+
+    class cConfigurationReader {
+        <<abstract>>
+        +readFile(filename)
+        +getSections() vector
+        +getEntries(section) vector
+    }
+
+    class InifileReader {
+        -string filename
+        +readFile(filename) override
+        +getSections() override
+    }
+
+    class cIOutputVectorManager {
+        <<interface>>
+        +startRun()
+        +endRun()
+        +recordVector(...)
+    }
+
+    class cIOutputScalarManager {
+        <<interface>>
+        +startRun()
+        +endRun()
+        +recordScalar(...)
+    }
+
+    class cIEventlogManager {
+        <<interface>>
+        +startRun()
+        +endRun()
+        +simulationEvent(event)
+    }
+
+    cEnvir --> cConfiguration : uses
+    cConfiguration <|-- cConfigurationEx
+    cConfigurationEx <|-- SectionBasedConfiguration
+    SectionBasedConfiguration --> cConfigurationReader : uses
+    cConfigurationReader <|-- InifileReader
+
+    cEnvir --> cIOutputVectorManager : records to
+    cEnvir --> cIOutputScalarManager : records to
+    cEnvir --> cIEventlogManager : logs to
+
+    note for cEnvir "环境抽象接口\n由CmdEnv/QtEnv实现"
+    note for SectionBasedConfiguration "处理INI文件配置\n支持迭代变量和继承"
+
+    %% 颜色样式 (Material Design)
+    class cEnvir:::envirStyle
+    class cConfiguration:::configStyle
+    class cConfigurationEx:::configStyle
+    class SectionBasedConfiguration:::sectionStyle
+    class cConfigurationReader:::readerStyle
+    class InifileReader:::implStyle
+    class cIOutputVectorManager:::outputStyle
+    class cIOutputScalarManager:::outputStyle
+    class cIEventlogManager:::outputStyle
+
+    classDef envirStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+    classDef configStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+    classDef sectionStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef readerStyle fill:#F3E5F5,stroke:#4A148C,color:#4A148C
+    classDef implStyle fill:#E1F5FE,stroke:#01579B,color:#01579B
+    classDef outputStyle fill:#FFEBEE,stroke:#B71C1C,color:#B71C1C
+```
 
 #### 启动流程详解
 
@@ -1777,6 +2455,182 @@ bool opp_fileexists(const char *path);
 void opp_mkdir(const char *path);
 ```
 
+#### 核心类图
+
+```mermaid
+classDiagram
+    direction TB
+
+    class opp_runtime_error {
+        -string errormsg
+        +opp_runtime_error(msg)
+        +what() char*
+    }
+
+    class ExprValue {
+        <<value>>
+        Type type
+        +UNDEF
+        +BOOL
+        +INT
+        +DOUBLE
+        +STRING
+        +POINTER
+        +getType() Type
+        +boolValue() bool
+        +intValue() long
+        +doubleValue() double
+        +stringValue() string
+    }
+
+    class ExprNode {
+        <<abstract>>
+        -ExprNode* parent
+        -vector children
+        +evaluate(context) ExprValue
+        +evaluateConst() ExprValue
+        +getPrecedence() int
+    }
+
+    class Expression {
+        -ExprNode* tree
+        -AstNode* ast
+        +parseText(text) void
+        +parseFile(filename) void
+        +evaluate(context) ExprValue
+        +boolValue() bool
+        +intValue() long
+        +doubleValue() double
+        +stringValue() string
+    }
+
+    class AstNode {
+        <<AST>>
+        Type type
+        +UNDEF
+        +CONSTANT
+        +OP
+        +IDENT
+        +FUNCTION
+        +MEMBER
+        +METHOD
+        -ExprValue constant
+        -string name
+        -vector children
+        +appendChild(node)
+        +str() string
+        +unparse() string
+    }
+
+    class AstTranslator {
+        <<abstract>>
+        +translateToExpressionTree(ast) ExprNode*
+    }
+
+    class MultiAstTranslator {
+        -vector translators
+        +translateToExpressionTree(ast) ExprNode*
+    }
+
+    class StringTokenizer {
+        -char* buffer
+        -char* rest
+        -string delimiterChars
+        +StringTokenizer(str, sep)
+        +hasMoreTokens() bool
+        +nextToken() char*
+        +asVector() vector
+    }
+
+    class PatternMatcher {
+        -string pattern
+        -bool dottedpath
+        -bool fullstring
+        -bool caseSensitive
+        +setPattern(pattern)
+        +matches(str) bool
+        +matchPrefix(str) bool
+    }
+
+    class MatchExpression {
+        -vector patterns
+        +parse(pattern)
+        +matches(object) bool
+        +matchesDefaultField(str) bool
+    }
+
+    class FileReader {
+        -string fileName
+        -FILE* file
+        -FileLock* fileLock
+        +FileReader(filename)
+        +open()
+        +close()
+        +readLine() char*
+        +seek(offset)
+    }
+
+    %% Expression hierarchy
+    Expression --> AstNode : parses to
+    Expression --> ExprNode : translates to
+    Expression --> AstTranslator : uses
+
+    %% AST translation
+    AstTranslator <|-- MultiAstTranslator
+
+    %% ExprNode context
+    ExprNode --> ExprValue : produces
+    ExprNode ..> Expression : uses Context
+
+    %% Pattern matching chain
+    PatternMatcher <-- MatchExpression : uses
+
+    %% Exception inheritance
+    opp_runtime_error --|> std_runtime_error
+
+    %% Color scheme (Material Design)
+    class opp_runtime_error:::exStyle
+    class ExprValue:::valStyle
+    class ExprNode:::nodeStyle
+    class Expression:::exprStyle
+    class AstNode:::astStyle
+    class AstTranslator:::transStyle
+    class MultiAstTranslator:::transStyle
+    class StringTokenizer:::utilStyle
+    class PatternMatcher:::utilStyle
+    class MatchExpression:::utilStyle
+    class FileReader:::utilStyle
+
+    classDef exStyle fill:#FFEBEE,stroke:#B71C1C,color:#B71C1C
+    classDef valStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+    classDef nodeStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef exprStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+    classDef astStyle fill:#F3E5F5,stroke:#4A148C,color:#4A148C
+    classDef transStyle fill:#E1F5FE,stroke:#01579B,color:#01579B
+    classDef utilStyle fill:#F5F5F5,stroke:#212121,color:#212121
+```
+
+**类图说明：**
+
+1. **表达式系统**（Expression/AstNode/ExprNode/ExprValue）：
+   - Expression：表达式解析器主类，将文本解析为 AST，再转换为 ExprNode 树
+   - AstNode：AST 中间表示，支持常量、运算符、标识符、函数调用等节点类型
+   - ExprNode：表达式求值树节点，由 AstTranslator 从 AST 转换
+   - ExprValue：求值过程中的值类型，支持 BOOL、INT、DOUBLE、STRING、POINTER
+
+2. **模式匹配**（PatternMatcher/MatchExpression）：
+   - PatternMatcher：glob 风格模式匹配，支持 `*`, `?`, `{a-z}`, `{0..999}` 等语法
+   - MatchExpression：高级匹配表达式，支持 `fieldname =~ pattern` 和 AND/OR/NOT 组合
+
+3. **字符串工具**（StringTokenizer）：
+   - 支持引用字符串和嵌套括号的字符串分割器
+
+4. **文件工具**（FileReader）：
+   - 高效的行式文件读取器，适用于 GB 级大文件（事件日志、向量文件）
+
+5. **异常处理**（opp_runtime_error）：
+   - 继承自 std::runtime_error 的便利异常类，支持 printf 风格构造
+
 #### 与其他子系统的关系
 
 common 子系统为所有其他子系统提供基础功能：
@@ -1789,6 +2643,123 @@ common 子系统为所有其他子系统提供基础功能：
 ### 5.4 nedxml 子系统详细设计
 
 nedxml 子系统是 GS-S 仿真系统的 NED/MSG 文件编译器，负责解析、验证和代码生成。
+
+#### 核心类图
+
+```mermaid
+classDiagram
+    direction TB
+
+    class NedParser {
+        -NedElement* tree
+        -bool loadedCorrectly
+        +parseFile(filename) NedElement*
+        +parseText(text) NedElement*
+        +getErrors() vector
+    }
+
+    class MsgParser {
+        -ASTNode* tree
+        +parseFile(filename) ASTNode*
+        +parseText(text) ASTNode*
+    }
+
+    class NedElement {
+        <<abstract>>
+        -NedElement* parent
+        -NedElement* firstChild
+        -NedElement* lastChild
+        -NedElement* prevSibling
+        -NedElement* nextSibling
+        +appendChild(child)
+        +getNumChildren() int
+    }
+
+    class NedFileNode {
+        -string filename
+        -string packageName
+        +getTopLevelTypes() vector
+    }
+
+    class NedTypeInfo {
+        -string name
+        -string superType
+        -vector~NedParam~ params
+        -vector~NedGate~ gates
+        +getParam(name) NedParam*
+        +getGate(name) NedGate*
+        +hasSubmodules() bool
+    }
+
+    class NedResourceCache {
+        -map~string,NedTypeInfo*~ types
+        -vector~string~ nedFolders
+        +loadNedFolder(path)
+        +lookupType(name) NedTypeInfo*
+        +getLoadedTypes() vector
+    }
+
+    class NedValidator {
+        <<abstract>>
+        +validate(ast)
+    }
+
+    class NedSyntaxValidator {
+        +validate(ast) override
+        -checkExpressions(node)
+        -checkIdentifiers(node)
+    }
+
+    class NedCrossValidator {
+        -NedResourceCache* cache
+        +validate(ast) override
+        -resolveTypeRefs(node)
+        -checkExtends(node)
+    }
+
+    class MsgCodeGenerator {
+        -MsgTypeTable* typeTable
+        +generate(ast, outputDir)
+        -generateClassDef(msgClass)
+        -generateFieldAccessors(field)
+    }
+
+    NedElement <|-- NedFileNode
+    NedElement <|-- NedTypeInfo
+
+    NedParser --> NedElement : produces
+    NedParser --> NedValidator : uses
+    NedValidator <|-- NedSyntaxValidator
+    NedValidator <|-- NedCrossValidator
+
+    NedCrossValidator --> NedResourceCache : queries
+    NedResourceCache --> NedTypeInfo : stores
+
+    MsgParser --> MsgCodeGenerator : feeds
+
+    note for NedElement "AST节点基类\n支持树结构遍历"
+    note for NedTypeInfo "NED类型元信息\n包含参数/门/子模块定义"
+
+    %% 颜色样式 (Material Design)
+    class NedParser:::parserStyle
+    class MsgParser:::parserStyle
+    class NedElement:::elementStyle
+    class NedFileNode:::nodeStyle
+    class NedTypeInfo:::infoStyle
+    class NedResourceCache:::cacheStyle
+    class NedValidator:::validatorStyle
+    class NedSyntaxValidator:::validatorStyle
+    class NedCrossValidator:::validatorStyle
+    class MsgCodeGenerator:::genStyle
+
+    classDef parserStyle fill:#E3F2FD,stroke:#0D47A1,color:#0D47A1
+    classDef elementStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+    classDef nodeStyle fill:#FFF3E0,stroke:#E65100,color:#E65100
+    classDef infoStyle fill:#F3E5F5,stroke:#4A148C,color:#4A148C
+    classDef cacheStyle fill:#E1F5FE,stroke:#01579B,color:#01579B
+    classDef validatorStyle fill:#FFEBEE,stroke:#B71C1C,color:#B71C1C
+    classDef genStyle fill:#E8F5E9,stroke:#1B5E20,color:#1B5E20
+```
 
 #### 编译器流程
 
@@ -1844,6 +2815,39 @@ flowchart TB
     NED_AST --> NED_GEN --> NED_OUT
     NED_AST --> XML_GEN --> XML_OUT
     MSG_AST --> MSG_CG --> H_CC
+
+    %% 输入层 - 蓝色系
+    style NED fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+    style MSG fill:#bbdefb,stroke:#1976D2,color:#0D47A1
+    style XML fill:#90caf9,stroke:#1976D2,color:#0D47A1
+
+    %% 词法分析层 - 绿色系
+    style NED_LEX fill:#c8e6c9,stroke:#388E3C,color:#1B5E20
+    style MSG_LEX fill:#c8e6c9,stroke:#388E3C,color:#1B5E20
+
+    %% 语法分析层 - 橙色系
+    style NED_Y fill:#ffe0b2,stroke:#F57C00,color:#E65100
+    style MSG_Y fill:#ffe0b2,stroke:#F57C00,color:#E65100
+    style XML_P fill:#ffcc80,stroke:#F57C00,color:#E65100
+
+    %% AST层 - 紫色系
+    style NED_AST fill:#e1bee7,stroke:#7B1FA2,color:#4A148C
+    style MSG_AST fill:#e1bee7,stroke:#7B1FA2,color:#4A148C
+
+    %% 验证层 - 粉色系
+    style DTD_V fill:#f8bbd9,stroke:#C2185B,color:#880E4F
+    style SYNTAX_V fill:#f8bbd9,stroke:#C2185B,color:#880E4F
+    style CROSS_V fill:#f48fb1,stroke:#C2185B,color:#880E4F
+
+    %% 代码生成层 - 青色系
+    style MSG_CG fill:#b2dfdb,stroke:#009688,color:#004D40
+    style NED_GEN fill:#b2dfdb,stroke:#009688,color:#004D40
+    style XML_GEN fill:#80cbc4,stroke:#009688,color:#004D40
+
+    %% 输出层 - 黄色系
+    style H_CC fill:#fff9c4,stroke:#F9A825,color:#F57F17
+    style NED_OUT fill:#fff9c4,stroke:#F9A825,color:#F57F17
+    style XML_OUT fill:#fff59d,stroke:#F9A825,color:#F57F17
 ```
 
 #### 解析器模块
@@ -1873,15 +2877,15 @@ class ASTNode {
     // 树结构
     ASTNode *parent, *firstChild, *lastChild;
     ASTNode *prevSibling, *nextSibling;
-    
+
     // 源码位置
     FileLine srcLoc;           // 文件:行号
     SourceRegion srcRegion;    // 起止行列
-    
+
     // 泛型属性访问
     virtual const char *getAttribute(const char *name) const;
     virtual void setAttribute(const char *name, const char *value);
-    
+
     // 节点类型
     virtual const char *getTagName() const = 0;
     virtual int getTagCode() const = 0;
@@ -2408,22 +3412,3 @@ Define_NED_Math_Function(sin, 1);
 - 不保证向后兼容性
 
 ---
-
-## 文档完成清单
-
-| 部分 | 状态 | 内容概要 |
-|------|------|---------|
-| **第一部分：仿真概览** | ✅ 完成 | 生命周期、时间驱动、事件驱动、混合仿真 |
-| **第二部分：仿真流程详解** | ✅ 完成 | 5阶段×3视角 + 技术支撑 |
-| **第三部分：实战案例** | ✅ 完成 | 卫星网络搭建、混合仿真、速度控制 |
-| **第四部分：技术架构参考** | ✅ 完成 | 子系统架构、核心类层次、API概览 |
-| **第五部分：子系统详细设计** | ✅ 完成 | sim、envir、common、nedxml、eventlog 子系统及公共 API 参考 |
-
----
-
-## 下一步建议
-
-1. 将本文档内容整合到正式设计文档中
-2. 根据实际产品名称替换 "GS-S" 代号
-3. 补充产品特定的 API 和扩展点说明
-4. 添加实际代码示例和截图
