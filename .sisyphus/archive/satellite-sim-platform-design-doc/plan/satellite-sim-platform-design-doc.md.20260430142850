@@ -1,0 +1,1446 @@
+# 撰写《卫星星座数字孪生仿真平台 软件设计说明书》工作计划
+
+## TL;DR
+
+> **快速摘要**：基于现有的 C++ 离散事件仿真平台代码（src/sim、src/sim/parsim、nedxml、envir、cmdenv、scave、eventlog、common 共8个子系统），按照 GJB438B-2009 风格模板（`.sisyphus/template/软件设计说明_模板.md`），脱敏地撰写一份《卫星星座数字孪生仿真平台 软件设计说明书》中文文档。
+>
+> **交付物**：
+> - `docs/卫星星座数字孪生仿真平台-软件设计说明书.md`（单一 markdown 文档，覆盖模板全部 7 章）
+>
+> **预估工作量**：Medium-Large（约 3000-4500 行 markdown，包含图表与表格描述；新增分布式并行仿真子系统约 200 行）
+> **并行执行**：YES — 4 个并行 wave
+> **关键路径**：T1 术语映射表 → T6 第4章体系结构 → T7-T13c 第5章详细设计 → T14 一致性审校 → 最终评审
+
+---
+
+## Context
+
+### 原始请求
+用户提供 `.sisyphus/template/软件设计说明_模板.md` 为模板，要求"以这个为模板，以现有仿真平台的设计为基础，写出'XX仿真平台软件设计说明文档'。使用其技术，但不要提到产品名"。后续追加约束："本期项目中不考虑三维展示，文档中不要提到相关内容"。
+
+### 访谈摘要
+**关键决策**：
+- 平台定位：**卫星星座数字孪生仿真平台**
+- 覆盖范围：核心仿真内核 + 建模语言 + 命令行运行 + 结果分析 + **分布式并行仿真** + **混合调度（离散事件+连续时间推进）**（不含图形界面/IDE）
+- 第5章粒度：按子系统粒度，每个子系统 1 个 5.X 章节（共 8 个子系统）
+- 第6章需求追溯：占位模板，按"功能-模块"映射生成虚拟需求标识
+- 脱敏程度：仅替换产品名/品牌名为中性表述，保留 C++/Qt/Python/NED/msg/MPI 等通用技术名词
+- **本期不含三维展示**
+- **新增**：分布式并行仿真子系统作为大规模卫星星座（成百上千节点）仿真的关键能力，需独立成章
+
+### 自评关键差距（替代 Metis 评审）
+- **G1**：源代码使用 C++ 类名带 `c` 前缀（cSimulation 等），这些在通用 C++ 仿真领域属于通用 API 命名传统，文档保留这些类名作为"参考实现层"的 API 名称是可接受的
+- **G2**：模板要求的"引用文档"清单里包含 GJB438B-2009 等真实规范，需保留；其他需求规格说明用占位
+- **G3**：模板要求的"接口设计"小节需要列出至少 2-3 个对外接口（命令行接口、模型库接口、结果文件接口）
+- **G4**：模板的"系统状态"表格需要根据仿真生命周期（初始化、运行、结束、异常）填写
+- **G5**：禁三维约束需在每个涉及结果可视化的位置严格执行
+
+---
+
+## Work Objectives
+
+### 核心目标
+基于现有仿真平台代码逆向编写一份**完全脱敏**、**符合 GJB438B-2009 模板**、**不含三维展示内容**的《卫星星座数字孪生仿真平台 软件设计说明书》中文文档。
+
+### 具体交付物
+- **单个文件**：`docs/卫星星座数字孪生仿真平台-软件设计说明书.md`
+- 包含模板要求的全部 7 个一级章节（范围、引用文档、CSCI级设计决策、CSCI体系结构设计、CSCI详细设计、需求可追溯性、注释）
+- 第 5 章包含 **8 个子系统**详细设计章节（含分布式并行仿真）
+- 全部图表用 mermaid 描述或文字描述
+- 全部表格使用 markdown 语法
+
+### Definition of Done
+- [x] 文档存在于 `docs/卫星星座数字孪生仿真平台-软件设计说明书.md`
+- [x] `grep -ic 'omnetpp\|omnest\|omnett' <文件>` 输出为 `0`
+- [x] `grep -iEc '三维|3D|opengl|webgl|立体可视|3d 视图|three\.js|osg|osgearth' <文件>` 输出为 `0`
+- [x] `grep -c '^# ' <文件>` 输出为 `1`（仅一个一级标题）
+- [x] `grep -c '^## ' <文件>` 输出 ≥ `7`（至少 7 个二级标题）
+- [x] `grep -c '^### 5\.' <文件>` 输出 ≥ `9`（第 5 章至少 9 个子系统，含分布式并行仿真与混合调度）
+- [x] `wc -l <文件>` 输出 ≥ `1100` 行（实质性内容）
+- [x] markdown 语法校验通过（标题层级、表格、列表无破损）
+
+### Must Have
+- 完整 7 章结构，每章不少于模板规定的子条目
+- 每个子系统详细设计包含：职责、主要类/模块、数据流/控制流、对外接口
+- 至少 5 个流程图（事件循环、编译流水线、结果记录管道、**分布式分区与同步协议**、**混合调度时间推进**）
+- 需求可追溯表至少 23 行（功能-模块映射，含分布式并行与混合调度）
+- 术语表至少包含 16 个术语缩略语（含 MPI、LP、FES、PDES、CMB、HIL、ODE、RT 等并行仿真与混合调度术语）
+- 卫星星座数字孪生场景化的"系统概述"
+- **分布式并行仿真章节必须覆盖**：通信抽象层（MPI/命名管道/共享文件）、同步协议（保守同步/Null Message Protocol/理想同步协议/无同步）、前瞻量计算、分区机制（占位模块/代理门）、跨分区消息传递、与单机模式的关系
+- **混合调度章节必须覆盖**：可插拔调度器抽象、离散事件与连续时间共存机制、实时同步调度（仿真时间-墙钟时间映射与缩放）、外部时间源/外部事件源接入（硬件在环）、定步长积分采样器（自消息周期触发）、协程式过程化建模（activity 模式）与事件驱动模式（handleMessage）的关系、典型应用场景（卫星轨道动力学连续推进 + 通信事件离散触发）
+
+### Must NOT Have（守护项）
+- **绝对不出现** `omnetpp`、`OMNeT++`、`OMNEST`、`Akaroa`、`Eclipse`、`Tkenv`、`qtenv` 等品牌/产品名
+- **绝对不出现** 任何与三维相关的内容：`三维`、`3D`、`3d`、`OpenGL`、`WebGL`、`立体可视`、`OSG`、`osgEarth`、`Three.js`、`地球三维`、`星座三维显示`
+- 不写出 C++ 代码片段（保持设计层级，不下沉到实现）
+- 不出现具体版本号 `6.4.0`，统一改为 `V1.0` 或"本期版本"
+- 不出现"图形仿真运行环境"相关章节（cmdenv 之外的运行模式）
+- 不出现"集成开发环境/IDE"相关章节
+- 第 4.1/5.X 中不直接复制 src/ 的英文目录名作为模块名，必须使用脱敏中文名
+
+---
+
+## Verification Strategy
+
+> **零人工干预** — 全部验证由执行 agent 通过命令完成。
+
+### 测试决策
+- **测试基础设施**: NO（这是文档撰写任务，无单元测试框架适用）
+- **自动化测试**: NO
+- **验证方式**: 全部通过 `grep`/`wc`/markdown lint 完成
+
+### QA 策略
+每个任务都通过 `Bash(grep/wc)` 直接验证产出物：
+- **品牌脱敏**：`grep -i` 检测禁词数量为 0
+- **三维脱敏**：`grep -iE` 检测禁词数量为 0
+- **结构完备**：`grep -c '^### '` 检测章节数符合预期
+- **内容充实**：`wc -l` / `wc -w` 检测最低字数
+
+证据保存至 `.sisyphus/evidence/task-{N}-{scenario}.txt`。
+
+---
+
+## Execution Strategy
+
+### 并行执行波次
+
+```
+Wave 1（立即开始 — 基础与脚手架，5 任务并行）:
+├── T1: 脱敏术语映射表 + 章节大纲（含分布式并行术语）
+├── T2: 第1章「范围」（标识、系统概述、文档概述）
+├── T3: 第2章「引用文档」 + 第7章「注释」（术语表）
+├── T4: 第3章「CSCI级设计决策」+ 系统状态表
+└── T5: 第6章「需求可追溯性」占位表（含分布式并行追溯项）
+
+Wave 2（依赖 T1 — 体系结构与详细设计前 4 子系统，5 任务并行）:
+├── T6: 第4章「CSCI体系结构设计」（部件清单含 8 子系统 + 执行方案 + 接口设计）
+├── T7: 第5.1章「通用基础库」详细设计
+├── T8: 第5.2章「仿真内核」详细设计
+├── T9: 第5.3章「建模语言编译子系统」详细设计
+└── T10: 第5.4章「仿真运行环境抽象层」详细设计
+
+Wave 3（依赖 T1 — 详细设计后 5 子系统，5 任务并行）:
+├── T11: 第5.5章「命令行仿真运行器」详细设计
+├── T12: 第5.6章「事件日志记录与回放子系统」详细设计
+├── T13: 第5.7章「仿真结果记录与分析子系统」详细设计
+├── T13b: 第5.8章「分布式并行仿真子系统」详细设计 ★ 新增
+└── T13c: 第5.9章「混合调度子系统（连续时间推进与外部时间源接入）」详细设计 ★ 新增
+
+Wave 4（依赖 T2-T13c — 整合与全文一致性审校）:
+└── T14: 整合所有章节为单一文档，统一编号、目录、内部锚点链接
+
+Wave FINAL（依赖 T14 — 最终审校）:
+├── F1: 品牌脱敏审计（grep 全部禁词，统计为 0）
+├── F2: 三维脱敏审计（grep 全部三维禁词，统计为 0）
+├── F3: 结构完备性审计（章节数、表格数、行数）
+└── F4: 全文连贯性人工抽样审校
+→ 展示结果 → 等用户明确"okay" → 才能完成
+```
+
+### 依赖矩阵
+
+| 任务 | 依赖 | 阻塞 |
+|---|---|---|
+| T1 | — | T6-T13c |
+| T2-T5 | — | T14 |
+| T6 | T1 | T14 |
+| T7-T10 | T1 | T14 |
+| T11-T13c | T1（T13b 还依赖 T8、T10；T13c 还依赖 T8、T10） | T14 |
+| T14 | T2-T13c | F1-F4 |
+| F1-F4 | T14 | 用户 okay |
+
+### 代理派发摘要
+
+| Wave | 任务数 | 派发 |
+|---|---|---|
+| 1 | 5 | T1→`writing`, T2-T5→`writing` |
+| 2 | 5 | T6-T10→`writing` |
+| 3 | 5 | T11-T13c→`writing` |
+| 4 | 1 | T14→`unspecified-low` |
+| FINAL | 4 | F1-F3→`quick`, F4→`unspecified-high` |
+
+---
+
+## TODOs
+
+> **执行铁律**：
+> 1. 每次写章节前必须先查阅 `.sisyphus/scratch/terminology-map.md`（由 T1 产出），统一使用脱敏术语
+> 2. 严禁出现 `omnetpp/OMNeT/OMNEST/Eclipse/Tkenv/qtenv/Akaroa` 等品牌词
+> 3. 严禁出现 `三维/3D/3d/OpenGL/WebGL/立体可视/OSG/Three.js/地球三维` 等三维相关词
+> 4. 全部章节内容直接 Append 到 `docs/卫星星座数字孪生仿真平台-软件设计说明书.md`，每个任务仅写自己负责的章节
+> 5. 写完后用 `grep` 自检本任务所写内容不含禁词
+
+- [x] 1. **脱敏术语映射表 + 章节大纲**
+
+  **What to do**:
+  - 创建 `.sisyphus/scratch/terminology-map.md`：左列为内部源码/品牌专有词汇，右列为脱敏后中文术语；至少覆盖以下类别共 ≥ 25 行：
+    - 产品/品牌脱敏：OMNeT++/OMNEST/Akaroa/Tkenv/qtenv/Eclipse/parsim 等 → 通用功能描述
+    - 内核类脱敏：cModule/cMessage/cSimulation/cScheduler/cSimpleModule/cFutureEventSet 等 → 中文功能称谓（如"模块/消息/仿真上下文/调度器/简单模块/未来事件集"）
+    - 分布式并行术语：null message/lookahead/LP/communication backend/proxy gate/placeholder module → 空消息/前瞻量/逻辑进程/通信后端/代理门/占位模块
+    - 混合调度术语：scheduler-class/realtimescheduler-scaling/waitUntil/HIL/activity/coroutine/integration step → 调度器类/实时缩放系数/等待至/硬件在环/活动模式/协程/积分步长
+    - 三维/可视化禁词：3D/OpenGL/WebGL/Three.js/OSG → 不出现（明确标注"本期不涉及"）
+  - 创建 `docs/卫星星座数字孪生仿真平台-软件设计说明书.md` 章节占位骨架（一级标题 + 7 个二级标题 + 5.X 9 个三级标题），但每节正文留空（由后续任务填充）
+  - 在文档头部预留"目录"与"文档元数据"占位区
+
+  **Must NOT do**:
+  - 不撰写正文内容（只搭骨架）
+  - 不出现任何品牌词或三维相关词
+
+  **Recommended Agent Profile**:
+  - **Category**: `writing`
+  - **Skills**: []
+
+  **Parallelization**:
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 1
+  - **Blocks**: T6, T7, T8, T9, T10, T11, T12, T13, T13b, T13c, T14
+  - **Blocked By**: 无
+
+  **References**:
+  - 模板：`.sisyphus/template/软件设计说明_模板.md`（全文 175 行，章节结构）
+  - 内核公开 API：`include/omnetpp/`（脱敏前类名来源）
+  - 分布式并行子系统源码：`src/sim/parsim/`（术语来源：cnullmessageprotocol.cc、cidealsimulationprot.cc、cplaceholdermod.cc 等）
+  - 混合调度源码：`include/omnetpp/cscheduler.h`、`src/sim/cscheduler.cc`、`include/omnetpp/csimplemodule.h`（术语来源）
+
+  **Acceptance Criteria**:
+  - [ ] `.sisyphus/scratch/terminology-map.md` 行数 ≥ 25
+  - [ ] 术语表覆盖 5 类（品牌/内核/分布式/混合调度/禁词）
+  - [ ] `docs/...md` 包含 1 个一级标题、7 个二级标题、9 个 5.X 三级标题（仅骨架）
+  - [ ] 文档骨架中无品牌词、无三维词
+
+  **QA Scenarios**:
+
+  ```
+  Scenario: 术语表覆盖完整性
+    Tool: Bash
+    Steps:
+      1. wc -l .sisyphus/scratch/terminology-map.md                                       # ≥ 25
+      2. grep -c '前瞻量\|空消息\|逻辑进程\|代理门\|占位模块' .sisyphus/scratch/terminology-map.md  # ≥ 5（分布式并行术语全覆盖）
+      3. grep -c '调度器\|实时\|协程\|积分\|硬件在环\|活动模式' .sisyphus/scratch/terminology-map.md  # ≥ 6（混合调度术语全覆盖）
+      4. grep -ic 'omnetpp\|omnest\|akaroa\|tkenv\|qtenv\|eclipse' .sisyphus/scratch/terminology-map.md  # = 0（脱敏后表中右列不含品牌词）
+    Evidence: .sisyphus/evidence/task-1-terminology.txt
+
+  Scenario: 文档骨架结构正确
+    Tool: Bash
+    Steps:
+      1. grep -c '^# ' docs/卫星星座数字孪生仿真平台-软件设计说明书.md          # = 1
+      2. grep -c '^## ' docs/卫星星座数字孪生仿真平台-软件设计说明书.md         # ≥ 7
+      3. grep -c '^### 5\.' docs/卫星星座数字孪生仿真平台-软件设计说明书.md     # ≥ 9
+      4. grep -iEc '三维|3D|opengl|webgl' docs/卫星星座数字孪生仿真平台-软件设计说明书.md  # = 0
+    Evidence: .sisyphus/evidence/task-1-skeleton.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 2. **第1章「范围」**
+
+  **What to do**:
+  - 撰写 1.1 标识：CSCI 标识"卫星星座数字孪生仿真平台 V1.0"，唯一标识符建议形如 `SAT-DT-SIM-CSCI-V1.0`
+  - 撰写 1.2 系统概述：用 ≥ 200 字描述卫星星座数字孪生场景：星座规模（≥100 颗卫星）、仿真目标（轨道动力学、星间链路、地面站接入、任务调度）、与外部系统关系（运控系统、测控系统、地面站）
+  - 撰写 1.3 文档概述：本文档用途、读者范围、章节组织
+  - 包含 ≥ 1 张 mermaid 系统级关系图（CSCI 与外部实体的边界关系）
+
+  **Must NOT do**:
+  - 不出现品牌词（OMNeT++ 等）
+  - 不出现三维显示相关描述
+  - 不展开内部架构（属于第4章范围）
+
+  **Recommended Agent Profile**:
+  - **Category**: `writing`
+  - **Skills**: []
+
+  **Parallelization**:
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 1
+  - **Blocks**: T14
+  - **Blocked By**: T1（需要骨架与术语表）
+
+  **References**:
+  - 模板：`.sisyphus/template/软件设计说明_模板.md` 第 1-43 行（第1章模板）
+  - 术语映射表：`.sisyphus/scratch/terminology-map.md`
+
+  **Acceptance Criteria**:
+  - [ ] 第1章总行数 ≥ 50
+  - [ ] 含 1.1 / 1.2 / 1.3 三个三级标题
+  - [ ] 含 ≥ 1 个 mermaid 图
+  - [ ] 不含禁词
+
+  **QA Scenarios**:
+
+  ```
+  Scenario: 第1章结构与脱敏校验
+    Tool: Bash
+    Steps:
+      1. awk '/^## 1\./,/^## 2\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | wc -l        # ≥ 50
+      2. awk '/^## 1\./,/^## 2\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -c '^### 1\.'  # ≥ 3
+      3. awk '/^## 1\./,/^## 2\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -c 'mermaid'    # ≥ 1
+      4. awk '/^## 1\./,/^## 2\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -ic 'omnetpp\|3D\|三维\|opengl'  # = 0
+      5. awk '/^## 1\./,/^## 2\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -c '卫星\|星座\|轨道'  # ≥ 5
+    Evidence: .sisyphus/evidence/task-2-chapter1.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 3. **第2章「引用文档」 + 第7章「注释」（术语表）**
+
+  **What to do**:
+  - 第2章：列出引用文档表（≥ 8 行），格式：编号 | 文档标识 | 标题 | 版本 | 日期 | 来源
+    - 必含：GJB 438C-2021、GJB 5236-2004、SRS（占位）、IDD（占位）、卫星轨道动力学规范、星间链路通信协议规范、地面测运控接口规范
+  - 第7章：术语与缩略语表（≥ 16 行），从 `.sisyphus/scratch/terminology-map.md` 提取脱敏后的中文术语；每行格式：术语 | 英文/缩略语 | 定义；必含 HIL、ODE、RT、LP（逻辑进程）等
+
+  **Must NOT do**:
+  - 不引用品牌产品手册
+  - 术语表不出现品牌词
+
+  **Recommended Agent Profile**:
+  - **Category**: `writing`
+  - **Skills**: []
+
+  **Parallelization**:
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 1
+  - **Blocks**: T14
+  - **Blocked By**: T1
+
+  **References**:
+  - 模板：`.sisyphus/template/软件设计说明_模板.md` 第 44-78 行（第2章）+ 第 173-175 行（第7章）
+  - 术语映射表：`.sisyphus/scratch/terminology-map.md`
+
+  **Acceptance Criteria**:
+  - [ ] 第2章引用文档表行数 ≥ 8（不含表头分隔行）
+  - [ ] 第7章术语表行数 ≥ 16
+  - [ ] 术语表含 HIL/ODE/RT/LP 四个新增术语
+
+  **QA Scenarios**:
+
+  ```
+  Scenario: 第2章引用文档表完整
+    Tool: Bash
+    Steps:
+      1. awk '/^## 2\./,/^## 3\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -cE '^\|.*\|.*\|'  # ≥ 10（含表头+8 行）
+      2. awk '/^## 2\./,/^## 3\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -c 'GJB'           # ≥ 2
+    Evidence: .sisyphus/evidence/task-3-chapter2.txt
+
+  Scenario: 第7章术语表覆盖新增术语
+    Tool: Bash
+    Steps:
+      1. awk '/^## 7\./,0' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -cE '^\|'                  # ≥ 18（含表头+16 行）
+      2. awk '/^## 7\./,0' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -cE 'HIL|ODE|实时|逻辑进程|前瞻量|空消息|协程|积分'  # ≥ 6
+      3. awk '/^## 7\./,0' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -ic 'omnetpp\|omnest'      # = 0
+    Evidence: .sisyphus/evidence/task-3-chapter7.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 4. **第3章「CSCI级设计决策」+ 系统状态表**
+
+  **What to do**:
+  - 撰写 3.1 系统能力的设计决策：覆盖输入响应（事件驱动 + 实时调度）、可用性（容错与重启）、安全（访问控制与日志审计）、扩展性（插件化调度器与通信后端）
+  - 撰写 3.2 与外部接口有关的设计决策（占位，详见 IDD）
+  - 撰写 3.3 系统状态表：≥ 6 个状态（初始化/配置加载/运行中/暂停/结束/异常），每行：状态名 | 触发事件 | 进入条件 | 退出条件 | 说明
+  - 撰写 3.4 与软件部件有关的设计决策：模块化原则、零侵入扩展原则、调度器可插拔原则、并行/混合调度互斥原则
+  - 包含 ≥ 1 张 mermaid `stateDiagram-v2` 状态机图
+
+  **Must NOT do**:
+  - 不展开模块内部细节（属于第5章）
+  - 不出现品牌词
+
+  **Recommended Agent Profile**:
+  - **Category**: `writing`
+  - **Skills**: []
+
+  **Parallelization**:
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 1
+  - **Blocks**: T14
+  - **Blocked By**: T1
+
+  **References**:
+  - 模板：`.sisyphus/template/软件设计说明_模板.md` 第 79-106 行（第3章）
+
+  **Acceptance Criteria**:
+  - [ ] 第3章总行数 ≥ 80
+  - [ ] 含 3.1 / 3.2 / 3.3 / 3.4 四个三级标题
+  - [ ] 状态表行数 ≥ 6
+  - [ ] 含 ≥ 1 个 mermaid stateDiagram
+
+  **QA Scenarios**:
+
+  ```
+  Scenario: 第3章结构与状态机完整
+    Tool: Bash
+    Steps:
+      1. awk '/^## 3\./,/^## 4\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | wc -l                  # ≥ 80
+      2. awk '/^## 3\./,/^## 4\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -c '^### 3\.'    # ≥ 4
+      3. awk '/^## 3\./,/^## 4\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -c 'stateDiagram'  # ≥ 1
+      4. awk '/^## 3\./,/^## 4\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -cE '^\|.*初始化|^\|.*运行中|^\|.*暂停|^\|.*结束|^\|.*异常'  # ≥ 5
+      5. awk '/^## 3\./,/^## 4\./' docs/卫星星座数字孪生仿真平台-软件设计说明书.md | grep -c '可插拔\|互斥\|零侵入'  # ≥ 3（设计原则覆盖）
+    Evidence: .sisyphus/evidence/task-4-chapter3.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 5. **第6章「需求可追溯性」占位表**
+
+  **What to do**:
+  - 按"功能-模块"映射生成至少 24 行追溯表：
+    | 需求标识 | 模块名称 | 标识 | 本文档章节号 |
+    |---|---|---|---|
+    | SRS-001 | 通用基础库 | 字符串/文件/表达式工具 | 5.1 |
+    | SRS-002 | 通用基础库 | 单位换算与表达式求值 | 5.1 |
+    | SRS-003 | 通用基础库 | 伪随机数生成 | 5.1 |
+    | SRS-010 | 仿真内核 | 事件调度循环 | 5.2 |
+    | SRS-011 | 仿真内核 | 模块拓扑构建 | 5.2 |
+    | SRS-012 | 仿真内核 | 消息传递与信道时延 | 5.2 |
+    | SRS-013 | 仿真内核 | 信号-监听器机制 | 5.2 |
+    | SRS-020 | 建模语言编译子系统 | NED 解析与校验 | 5.3 |
+    | SRS-021 | 建模语言编译子系统 | msg 编译与代码生成 | 5.3 |
+    | SRS-022 | 建模语言编译子系统 | AST 序列化为 XML | 5.3 |
+    | SRS-030 | 仿真运行环境抽象层 | 配置文件解析 | 5.4 |
+    | SRS-031 | 仿真运行环境抽象层 | 参数研究展开 | 5.4 |
+    | SRS-040 | 命令行仿真运行器 | 命令行参数解析 | 5.5 |
+    | SRS-041 | 命令行仿真运行器 | 进度反馈与速度计 | 5.5 |
+    | SRS-050 | 事件日志子系统 | 事件日志记录 | 5.6 |
+    | SRS-051 | 事件日志子系统 | 日志过滤与回放 | 5.6 |
+    | SRS-060 | 结果记录与分析子系统 | 标量/向量记录 | 5.7 |
+    | SRS-061 | 结果记录与分析子系统 | 直方图与统计 | 5.7 |
+    | SRS-062 | 结果记录与分析子系统 | 命令行结果导出工具 | 5.7 |
+    | SRS-070 | 分布式并行仿真子系统 | 通信抽象（消息传递接口/命名管道/共享文件） | 5.8 |
+    | SRS-071 | 分布式并行仿真子系统 | 保守同步协议（空消息协议） | 5.8 |
+    | SRS-072 | 分布式并行仿真子系统 | 理想同步协议（用于评测） | 5.8 |
+    | SRS-073 | 分布式并行仿真子系统 | 模型分区与占位模块、代理门 | 5.8 |
+    | SRS-074 | 分布式并行仿真子系统 | 前瞻量计算与链路时延查询 | 5.8 |
+    | SRS-080 | 混合调度子系统 | 可插拔调度器抽象（离散事件 + 外部时间源） | 5.9 |
+    | SRS-081 | 混合调度子系统 | 实时同步调度（仿真时间-墙钟时间映射与缩放） | 5.9 |
+    | SRS-082 | 混合调度子系统 | 连续时间状态推进（定步长积分采样器） | 5.9 |
+    | SRS-083 | 混合调度子系统 | 外部事件源接入（硬件在环/外部传感器时间戳注入） | 5.9 |
+    | SRS-084 | 混合调度子系统 | 协程式过程化建模（连续过程 activity 模式） | 5.9 |
+
+  **Must NOT do**:
+  - 不映射到三维显示功能
+  - 不映射到图形 IDE 功能
+
+  **Recommended Agent Profile**:
+  - **Category**: `writing`
+  - **Skills**: []
+
+  **Parallelization**:
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 1
+  - **Blocks**: T14
+  - **Blocked By**: 无
+
+  **References**:
+  - 模板：`.sisyphus/template/软件设计说明_模板.md` 第 156-172 行（第6章「需求可追踪行」）
+
+  **Acceptance Criteria**:
+  - [ ] 第6章追溯表行数 ≥ 25（表头+24 行需求）
+  - [ ] 表中含 SRS-001 ~ SRS-084 全部 24 项需求标识
+  - [ ] 章节号列指向 5.1 ~ 5.9 全部 9 个子章节
+  - [ ] 不含三维/品牌相关需求项
+
+  **QA Scenarios**:
+
+  ```
+  Scenario: 需求追溯表行数达标
+    Tool: Bash
+    Steps:
+      1. awk '/^## 6\./,/^## 7\./' "$DOC" | grep -c '^|'  # ≥ 25（表头+24 行）
+    Evidence: .sisyphus/evidence/task-5-traceability.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 6. **第4章「CSCI体系结构设计」**
+
+  **What to do**:
+  - **4.1 CSCI部件**：列出 **9 个软件单元**（通用基础库、仿真内核、建模语言编译子系统、仿真运行环境抽象层、命令行仿真运行器、事件日志子系统、结果记录与分析子系统、**分布式并行仿真子系统**、**混合调度子系统**）。每个单元给出：
+    - 项目唯一标识符（如 `CSU-COMM`、`CSU-SIM`、`CSU-NEDC`、`CSU-ENVA`、`CSU-CMDR`、`CSU-EVLG`、`CSU-RSAN`、`CSU-PSIM`、`CSU-HSCH`）
+    - 静态关系（依赖图）
+    - 用途与分配的需求标识（指向第6章）
+    - 开发状态（标注"自研/复用/再工程"）
+    - 计算机硬件资源（CPU/内存/磁盘占位估算；分布式并行子系统额外标注高速网络/MPI运行库依赖；混合调度子系统额外标注硬件在环/外部时间源接口依赖）
+    - 实现库放置（如 `libsimcore.a`、`libnedcore.a`、`libparsim.a`、`libhybridsched.a` 等脱敏命名）
+  - **4.2 执行方案**：用 mermaid `sequenceDiagram` 描绘从启动到结束的执行控制流：
+    `命令行入口 → 加载共享库 → 解析 NED → 构建模块拓扑 → 调用 initialize() → 选择调度器（默认事件队列调度器/实时调度器/外部时间源调度器/分布式并行调度器） → 进入事件循环 → 取出最早事件（或等待外部时间源/墙钟到达） → 调度模块 handleMessage() → 模块内部 emit() 信号 → 结果记录器写文件 → 仿真结束 → 调用 finish() → 输出 sca/vec → 退出`
+    用文字描述：动态控制序列、状态转换、时序关系、异常处理（如 cTerminationException、cRuntimeError）、单进程串行执行、信号-监听器并发回调、**多分区并行执行模式（每个逻辑进程独立持有事件队列，通过同步协议协调时间推进）**、**混合调度模式（仿真时间与墙钟时间同步、连续状态周期采样事件与离散事件交错执行、外部事件源异步注入）**
+  - **4.3 接口设计**（至少 6 个接口）：
+    - **4.3.1** 命令行接口（`CSI-CLI`）：参数列表（-u 运行环境、-c 配置名、-r 运行序号、-l 加载库、-n NED 路径、**-p 并行分区数**、**--scheduler 调度器类型（事件/实时/外部）**、**--rt-scaling 实时缩放因子**）
+    - **4.3.2** NED 模型库接口（`CSI-NED`）：NED 文件格式、加载机制、模型库注册（Define_Module）
+    - **4.3.3** 消息描述接口（`CSI-MSG`）：msg 文件格式、生成的 C++ 类协议、序列化为通信缓冲区（含跨进程跨节点序列化要求）
+    - **4.3.4** 结果文件接口（`CSI-RES`）：sca/vec/elog 文件格式、SQLite 表结构、CSV 导出格式（多分区时按分区编号分文件，离线合并）
+    - **4.3.5** **分布式并行通信接口（`CSI-PCOM`）**：抽象通信原语（发送/接收/广播/屏障）、底层适配（消息传递接口 MPI、命名管道、共享文件）、消息标签约定、通信缓冲区序列化协议
+    - **4.3.6** **混合调度时间源接口（`CSI-TIME`）**：可插拔调度器抽象（取下一事件/查看下一事件/回退事件）、墙钟时间映射（仿真时间⇄墙钟时间双向换算、缩放因子）、外部事件源注入原语（异步事件入队、阻塞/非阻塞 等待外部唤醒）、连续状态采样接口（定步长自消息触发的状态推进钩子）
+
+  **Must NOT do**:
+  - 不引用品牌库名（如 `liboppsim` → 改为脱敏 `libsimcore`）
+  - 不在执行方案中提"图形界面交互"
+  - 不在接口设计中提"三维渲染接口"
+
+  **Recommended Agent Profile**:
+  - **Category**: `writing`
+  - **Skills**: []
+
+  **Parallelization**:
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 2
+  - **Blocks**: T14
+  - **Blocked By**: T1（需要术语映射表）
+
+  **References**:
+  - 术语表：`.sisyphus/scratch/terminology-map.md`
+  - 模板：`.sisyphus/template/软件设计说明_模板.md` 第 107-135 行
+  - 依赖关系：`AGENTS.md` 第 46-52 行（Dependency Chain）
+  - 启动入口：`src/envir/main.cc`、`src/envir/startup.cc`、`src/envir/args.cc`
+
+  **Acceptance Criteria**:
+  - [ ] 第4章存在 ≥ 3 个三级标题（4.1 / 4.2 / 4.3）
+  - [ ] 4.3 接口设计含 ≥ 6 个四级接口标识（含分布式并行通信接口与混合调度时间源接口）
+  - [ ] 含 ≥ 1 个 mermaid 图（执行方案 sequenceDiagram）
+  - [ ] 4.1 软件单元清单含 9 个 CSU（含 CSU-PSIM 与 CSU-HSCH）
+  - [ ] 不含禁词
+
+  **QA Scenarios**:
+
+  ```
+  Scenario: 第4章三个小节齐全 + 至少 6 个接口
+    Tool: Bash
+    Steps:
+      1. grep -c '^### 4\.' "$DOC"   # ≥ 3
+      2. grep -c '^#### 4\.3\.' "$DOC"  # ≥ 6
+      3. grep -c '\`\`\`mermaid' "$DOC"  # ≥ 1
+      4. grep -cE 'CSU-PSIM|CSU-HSCH' "$DOC"  # ≥ 2
+      5. 禁词 0
+    Evidence: .sisyphus/evidence/task-6-chapter4.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 7. **第5.1章「通用基础库」详细设计**
+
+  **What to do**:
+  - 标识：`CSU-COMM-001` "通用基础库"
+  - 单元设计决策：跨子系统共享的非领域特定基础设施
+  - 约束/限定：必须不依赖任何上层（仿真内核以上）模块；必须可独立编译为静态库
+  - 编程语言：C++（与上层一致），不需特殊说明
+  - 输入/输出/数据元素：
+    - **字符串与文本**：`stringutil`、`stringtokenizer`、`patternmatcher`、`linetokenizer`、`enumstr`
+    - **文件与路径**：`filereader`、`fileutil`、`fileglobber`、`filelock`、`fnamelisttokenizer`
+    - **表达式求值**：`expression`、`exprnode`、`exprnodes`、`exprvalue`、`exprutil`、`unitconversion`、`bigdecimal`、`quantityformatter`
+    - **随机数引擎**：`lcgrandom`（线性同余）
+    - **数据结构**：`stringpool`、`pooledstring`、`statistics`、`histogram`
+    - **XML/JSON**：`saxparser`（含三种实现：default/libxml/yxml）、`jsonwriter`
+    - **结果输出辅助**：`omnetppscalarfilewriter`、`omnetppvectorfilewriter`、`sqlitescalarfilewriter`、`sqlitevectorfilewriter`、`csvwriter`
+    - **平台兼容**：`commonutil`、`stlutil`、`opp_ctype`、`exception`、`backward`（栈回溯）、`rwlock`（读写锁）
+  - 逻辑：纯工具库，无内部状态机；多数类是无状态的工具函数集
+  - **接口设计（必含小节 5.1.X「接口设计」）**：
+    - 在本章末尾增设 `#### 5.1.X 接口设计` 小节（与其他四级分层并列），覆盖**对外暴露**给上层子系统的所有公共接口。
+    - 必须包含**接口一览表**（≥ 1 张），列名：`接口标识 | 接口类别 | 关键操作签名（伪代码） | 数据传递方向 | 调用方 | 备注`。
+    - 必须列出 ≥ 6 个接口，至少覆盖以下类别：(1) 字符串与文本工具接口（如 `判空(s)`/`相等比较(a,b)`/`分词(s, sep)→list`）；(2) 文件与路径接口（如 `读取整个文件(path)→bytes`/`路径拼接(parts...)→path`）；(3) 表达式求值接口（如 `编译(expr_str)→AST`/`求值(AST, env)→Value`）；(4) 随机数引擎接口（如 `初始化(seed)`/`下一双精度()→double`）；(5) 数据结构接口（如 `字符串池.插入(s)→handle`、`直方图.收集(x)`）；(6) 结构化输出接口（如 `标量结果写入器.写入(name, value)`、`向量结果写入器.写入(id, t, v)`）。
+    - **每个接口**需说明：调用前置条件、典型调用场景、错误处理策略（异常 / 错误码 / 静默回退）。
+    - 接口稳定性约束：标记哪些为**稳定接口**（语义不可变）/ 哪些为**演进接口**（允许扩展但不允许破坏）。
+    - **不写 C++ 真实头文件代码片段**，仅以中文+伪代码签名描述。
+
+  **Must NOT do**:
+  - 不出现品牌词
+  - 表达式章节不暗示三维向量运算
+  - 接口签名以中文+伪代码描述，**不出现 C++ 真实语法**（如 `template<>`、`std::shared_ptr`、`namespace ::` 等）
+
+  **Recommended Agent Profile**:
+  - **Category**: `writing`
+  - **Skills**: []
+
+  **Parallelization**:
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 2
+  - **Blocks**: T14
+  - **Blocked By**: T1
+
+  **References**:
+  - 术语表
+  - 文件清单：`src/common/`（参见 m0018 工具调研结果）
+  - 模板：第 136-155 行
+
+  **Acceptance Criteria**:
+  - [ ] 5.1 节行数 ≥ 80
+  - [ ] 含 ≥ 6 个四级子节（覆盖 7 类基础设施）
+  - [ ] 不含禁词
+
+  **QA Scenarios**:
+
+  ```
+  Scenario: 5.1 章覆盖至少 7 类基础设施
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.1/,/^### 5\.2/' "$DOC" | wc -l   # ≥ 80 行
+      2. awk '/^### 5\.1/,/^### 5\.2/' "$DOC" | grep -c '^####'  # ≥ 6 子节
+      3. 禁词 0
+    Evidence: .sisyphus/evidence/task-7-chapter5_1.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 8. **第5.2章「仿真内核」详细设计**
+
+  **What to do**:
+  - 标识：`CSU-SIM-001` "仿真内核"
+  - 单元设计决策：事件驱动 + 复合模块层次 + 信号监听
+  - 约束：单线程事件循环；模块仅在自己的事件回调内修改自身状态
+  - 数据元素分组（按 `src/sim/` 文件结构）：
+    - **基类层**：`cObject`、`cNamedObject`、`cOwnedObject`、`cSoftOwner`、`cComponent`
+    - **拓扑层**：`cModule`、`cSimpleModule`、`cChannel`、`cDelayChannel`、`cDataRateChannel`、`cGate`、`cComponentType`
+    - **事件层**：`cEvent`、`cMessage`、`cPacket`、`cMessagePrinter`
+     - **调度层**：`cSimulation`、`cScheduler`（**可插拔抽象基类，扩展点见 5.9 混合调度子系统**）、`cFutureEventSet`、`cEventHeap`
+    - **参数层**：`cPar`、`cParImpl`、`cBoolParImpl`、`cDoubleParImpl`、`cIntParImpl`、`cObjectParImpl`、`cMsgPar`、`cConfiguration`、`cConfigOption`
+    - **统计与信号层**：`cListener`、`cResultListener`、`cResultFilter`、`cResultRecorder`、`cStatistic`、`cStdDev`、`cHistogram`、`cKSplit`、`cPSquare`、`cPrecollDensityEst`、`cAbstractHistogram`、`cHistogramStrategy`、`cFingerprint`、`cHasher`
+    - **协程层**：`cCoroutine`、`cContextSwitcher`（用于 activity() 风格模块）
+    - **生命周期层**：`cLifecycleListener`、`cException`（cRuntimeError、cTerminationException）
+    - **随机数层**：`cRandom`、`cMersenneTwister`、`cLCG32`
+    - **NED 函数注册层**：`cNedFunction`、`cNedMathFunction`、`cDynamicExpression`
+    - **持久化辅助层**：`cCommBuffer`、`cMemCommBuffer`、`cFileCommBuffer`、`cParsimComm`
+    - **配置类型层**：`cClassDescriptor`、`cObjectFactory`、`cRegistrationList`、`cProperties`、`cProperty`、`cEnum`、`cFsm`、`cQueue`、`cPacketQueue`、`cArray`
+  - 逻辑：用 mermaid `flowchart` 描绘事件循环：
+    - `selectNextEvent (FES.peekFirst)` → `executeEvent` → `handleMessage`/`activity` 钩子 → `cancelOrSchedule` → 循环
+    - 明确指出：`cScheduler::takeNextEvent()` 与 `guessNextEvent()` 是**可插拔扩展点**，默认实现按事件队列时间序取出最早事件；混合调度子系统（5.9 节）通过派生类替换该抽象以接入墙钟时间同步、外部事件源注入与连续时间采样。
+  - 异常处理：`cRuntimeError` 中止当次运行，`cTerminationException` 正常结束
+  - **接口设计（必含小节 5.2.X「接口设计」）**：
+    - 在本章末尾增设 `#### 5.2.X 接口设计` 小节，覆盖**仿真内核对外暴露的核心接口**（提供给模型代码、运行环境层、命令行运行器、并行仿真层、混合调度层使用）。
+    - 必须包含**接口一览表**（≥ 1 张），列名：`接口标识 | 接口类别 | 关键操作签名（伪代码） | 数据传递方向 | 调用方 | 备注`。
+    - 必须列出 ≥ 6 个接口，至少覆盖以下类别：(1) 模块生命周期接口（如 `初始化(stage)`、`处理消息(msg)`、`结束运行()`）；(2) 消息调度接口（如 `调度自消息(at_time, msg)`、`取消事件(msg)`、`发送(msg, gate)`）；(3) 参数访问接口（如 `读取参数(name)→Value`、`参数变更通知(name, oldVal)`）；(4) 信号发射接口（如 `发射信号(signal_id, value)`、`订阅信号(signal_id, listener)`）；(5) 调度器扩展点接口（如 `取下一事件()→Event`、`预览下一事件()→Event`，**该接口标注为 5.9 混合调度子系统的扩展点**）；(6) 持久化接口（如 `打包到通信缓冲区(buf)`、`从通信缓冲区解包(buf)`，**该接口标注为 5.8 分布式并行子系统的扩展点**）。
+    - **每个接口**需说明：调用前置条件、典型调用场景、错误处理策略、是否为可重入。
+    - 接口稳定性约束：标记**稳定接口**（与模型代码契约，不可破坏）/ **演进接口**（允许扩展但不允许破坏）/ **扩展点接口**（明确标注派生子系统及其挂接位置）。
+    - **不写 C++ 真实头文件代码片段**，仅以中文+伪代码签名描述。
+
+  **Must NOT do**:
+  - 不出现品牌词
+  - 不写 C++ 代码片段
+  - 不在统计层提"三维直方图"
+  - 接口签名以中文+伪代码描述，**不出现 C++ 真实语法**
+
+  **Recommended Agent Profile**:
+  - **Category**: `writing`
+  - **Skills**: []
+
+  **Parallelization**:
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 2
+  - **Blocks**: T14
+  - **Blocked By**: T1
+
+  **References**:
+  - 文件清单：`src/sim/`、`include/omnetpp/`（c前缀头文件）
+  - AGENTS.md 第 88-102 行（C++ 命名规范）
+  - 模板：第 136-155 行
+
+  **Acceptance Criteria**:
+  - [ ] 5.2 节行数 ≥ 150
+  - [ ] 含 ≥ 6 个四级子节（分层结构清晰）
+  - [ ] 含 ≥ 1 个 mermaid 图
+  - [ ] cScheduler 标注为可插拔抽象基类（引出 5.9）
+  - [ ] **接口设计小节存在**（标题含"接口设计"）
+  - [ ] **接口一览表 ≥ 1 张，接口数 ≥ 6**
+  - [ ] 不含禁词
+
+  **QA Scenarios**:
+
+  ```
+  Scenario: 5.2 仿真内核详细且分层清晰
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.2/,/^### 5\.3/' "$DOC" | wc -l   # ≥ 150 行
+      2. awk '/^### 5\.2/,/^### 5\.3/' "$DOC" | grep -c 'mermaid'  # ≥ 1
+      3. awk '/^### 5\.2/,/^### 5\.3/' "$DOC" | grep -c '^####'    # ≥ 6 分层
+      4. awk '/^### 5\.2/,/^### 5\.3/' "$DOC" | grep -c '可插拔\|5\.9'  # ≥ 1（调度器引出 5.9）
+      5. awk '/^### 5\.2/,/^### 5\.3/' "$DOC" | grep -c '接口设计'  # ≥ 1（接口设计小节）
+      6. awk '/^### 5\.2/,/^### 5\.3/' "$DOC" | awk '/接口设计/,/^### /' | grep -c '^|'  # ≥ 7（接口表 1 表头+6 接口行）
+      7. 禁词 0
+    Evidence: .sisyphus/evidence/task-8-chapter5_2.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 9. 第5.3章「建模描述语言编译子系统」详细设计
+
+  **What to do**：
+  - 在 `docs/卫星星座数字孪生仿真平台-软件设计说明书.md` 末尾追加 `### 5.3 建模描述语言编译子系统（CSU-NEDC）`
+  - 概述：将网络拓扑描述语言（NED）和消息定义语言（msg）编译为内部 AST 与 C++ 代码
+  - 词法/语法分析层：基于 flex/bison 的 NED 词法器与语法分析器、msg 词法器与语法分析器（参考 `src/nedxml/ned2.lex`、`ned2.y`、`msg2.lex`、`msg2.y`，**仅描述功能不引用文件名**）
+  - AST 构建层：抽象语法树构建器、AST 节点定义、AST 序列化为 XML
+  - 校验层：单文件语法/语义校验、跨文件交叉引用校验、类型一致性校验
+  - 代码生成层：msg 描述到 C++ 类的代码生成器、类型解析器
+  - 工具入口：网络描述编译工具（脱敏自 opp_nedtool）、消息描述编译工具（脱敏自 opp_msgtool）
+  - mermaid 流程图：源文件 → 词法分析 → 语法分析 → AST → 校验 → (NED→XML / msg→C++) 双输出管道
+  - 表格：编译产物清单（XML、.h、.cc、依赖关系文件）
+  - 错误诊断：错误定位（行号/列号）、错误恢复策略
+  - **接口设计（必含小节 5.3.X「接口设计」）**：
+    - 在本章末尾增设 `#### 5.3.X 接口设计` 小节，覆盖**编译子系统对外暴露的接口**（命令行调用接口、内部 API 接口、产物加载接口）。
+    - 必须包含**接口一览表**（≥ 1 张），列名同前。
+    - 必须列出 ≥ 6 个接口，至少覆盖以下类别：(1) 网络描述编译命令行接口（如 `编译网络描述(输入文件列表, 输出目录)→产物清单`，含 `-I` 包含路径、`-o` 输出路径等参数）；(2) 消息描述编译命令行接口（如 `编译消息描述(输入文件, 输出.h/.cc 路径)`）；(3) AST 构建接口（如 `源串→AST(src_text)→AstNode`、`AST→XML(ast_node, out_stream)`）；(4) 校验接口（如 `单文件校验(ast)→issue_list`、`跨文件交叉校验(ast_list)→issue_list`）；(5) 类型解析接口（如 `解析类型引用(name, scope)→TypeRef`）；(6) 错误诊断接口（如 `获取错误定位(issue)→file:line:col`、`格式化诊断(issue, color)→string`）。
+    - **每个接口**需说明：调用前置条件、典型调用场景、错误处理策略、产物文件命名约定。
+    - 接口稳定性约束：命令行参数与产物格式属于**稳定接口**（与构建系统及下游编译器契约）。
+    - **不写真实代码片段**，仅以中文+伪代码签名描述。
+
+  **Must NOT do**：
+  - 不出现 `opp_nedtool`/`opp_msgtool` 字面量，统一改为"网络描述编译工具"/"消息描述编译工具"
+  - 不出现 `nedxml` 子目录名
+  - 不写出 NED 语言关键字示例代码（避免与外部产品 NED 语言完全等同）
+  - 接口签名以中文+伪代码描述，**不出现 C++ 真实语法**
+
+  **Recommended Agent Profile**：
+  - **Category**: `writing` — 长文档章节撰写
+  - **Skills**: 无（直接写作）
+
+  **Parallelization**：
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 2（与 T7、T8、T10 并行）
+  - **Blocks**: T14
+  - **Blocked By**: T1（术语映射表）
+
+  **References**：
+  - 模板章节 5.X
+  - 子系统目录：`src/nedxml/`（含 `ned2.lex`、`ned2.y`、`msg2.lex`、`msg2.y`、`astbuilder.cc`、`msganalyzer.cc`、`msgcodegenerator.cc`、`nedvalidator.cc`、`nedcrossvalidator.cc`、`xmlgenerator.cc`、`opp_nedtool.cc`、`opp_msgtool.cc`）
+  - 术语映射表 `.sisyphus/scratch/terminology-map.md`
+
+  **Acceptance Criteria**：
+  - [ ] 5.3 节存在且 ≥ 130 行
+  - [ ] 至少 1 个 mermaid 编译流水线图
+  - [ ] 至少 1 个产物清单表
+  - [ ] 至少 5 个 `####` 四级分层
+  - [ ] **接口设计小节存在 ∧ 接口一览表 ≥ 1 张 ∧ 接口数 ≥ 6**
+
+  **QA Scenarios**：
+  ```
+  Scenario: 5.3 编译子系统结构完整
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.3/,/^### 5\.4/' "$DOC" | wc -l       # ≥ 130
+      2. awk '/^### 5\.3/,/^### 5\.4/' "$DOC" | grep -c 'mermaid'  # ≥ 1
+      3. awk '/^### 5\.3/,/^### 5\.4/' "$DOC" | grep -ic 'opp_nedtool\|opp_msgtool\|nedxml'  # = 0
+      4. awk '/^### 5\.3/,/^### 5\.4/' "$DOC" | grep -ic 'omnetpp'  # = 0
+      5. awk '/^### 5\.3/,/^### 5\.4/' "$DOC" | grep -c '接口设计'  # ≥ 1
+      6. awk '/^### 5\.3/,/^### 5\.4/' "$DOC" | awk '/接口设计/,/^### /' | grep -c '^|'  # ≥ 7
+    Evidence: .sisyphus/evidence/task-9-chapter5_3.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 10. 第5.4章「仿真运行环境抽象层」详细设计
+
+  **What to do**：
+  - 在文档末尾追加 `### 5.4 仿真运行环境抽象层（CSU-ENVA）`
+  - 概述：为仿真内核与外部世界（命令行、配置文件、日志、结果输出）之间提供解耦抽象
+  - 配置管理层：分节配置文件读取器、INI 配置解析器、参数场景迭代器（参考 `src/envir/sectionbasedconfig.cc`、`inifilereader.cc`、`scenario.cc`、`valueiterator.cc`，**仅描述功能**）
+  - XML 文档缓存：基于 SAX 的 XML 文档解析与缓存复用
+  - 结果输出管理层：标量结果文件管理器、向量结果文件管理器、SQLite 结果文件管理器、事件日志文件管理器
+  - 应用程序注册：仿真运行环境注册中心、启动入口
+  - 信号统计与记录：信号回调机制、统计收集器、过滤器
+  - mermaid 时序图：配置加载 → 模型实例化 → 运行控制 → 结果落盘
+  - 表格：环境抽象层支持的输出格式（标量、向量、SQLite、事件日志、JSON 等）
+  - 表格：配置项分级（Per-Run、Per-Object、Per-Object-Per-Run）
+  - **接口设计（必含小节 5.4.X「接口设计」）**：
+    - 在本章末尾增设 `#### 5.4.X 接口设计` 小节，覆盖**运行环境抽象层向上（仿真内核）与向下（外部世界：文件、命令行）暴露的双向接口**。
+    - 必须包含**接口一览表**（≥ 1 张），列名同前。
+    - 必须列出 ≥ 6 个接口，至少覆盖以下类别：(1) 配置查询接口（如 `读取配置项(name, run_idx)→Value`、`读取每对象配置(obj_full_path, key)→Value`、`枚举运行场景(config_name)→ScenarioList`）；(2) 结果输出注册接口（如 `注册标量(component, name, value, attrs)`、`注册向量(component, name)→vec_id`、`记录向量样本(vec_id, t, value)`）；(3) XML 文档加载接口（如 `加载XML(path)→DocHandle`、`查询节点(handle, xpath)→NodeList`）；(4) 信号统计接口（如 `订阅(component, signal_id, listener)`、`记录直方图(component, name, samples)`）；(5) 应用程序入口注册接口（如 `注册应用(name, factory_fn)`、`启动应用(argc, argv)→exit_code`）；(6) 事件日志挂接接口（**该接口为 5.6 事件日志子系统的扩展点**，如 `安装日志写入器(writer)`、`日志记录事件(event_kind, fields)`）。
+    - **每个接口**需说明：调用前置条件、调用方（内核/命令行运行器/分析工具）、错误处理策略、与配置项的耦合关系。
+    - 接口稳定性约束：标记**稳定接口**（与上下游契约）/ **演进接口** / **扩展点接口**（5.6/5.7/5.8 派生）。
+    - **不写真实代码片段**。
+
+  **Must NOT do**：
+  - 不出现 `envir` 子目录名
+  - 不出现 `inifilereader`/`sectionbasedconfig` 等英文实现名（仅作为内部代号）
+  - 不出现"图形仿真运行环境"或 IDE 集成内容
+  - 接口签名以中文+伪代码描述，**不出现 C++ 真实语法**
+
+  **Recommended Agent Profile**：
+  - **Category**: `writing`
+  - **Skills**: 无
+
+  **Parallelization**：
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 2（与 T7、T8、T9 并行）
+  - **Blocks**: T11、T14
+  - **Blocked By**: T1
+
+  **References**：
+  - 子系统目录：`src/envir/`（含 `envirbase.cc`、`sectionbasedconfig.cc`、`inifilereader.cc`、`scenario.cc`、`valueiterator.cc`、`xmldoccache.cc`、`appreg.cc`、`startup.cc`、`main.cc`、`outvectormgr.cc`、`outscalarmgr.cc`、`eventlogfilemgr.cc`、`sqliteoutvectormgr.cc`、`sqliteoutscalarmgr.cc`）
+  - 术语映射表
+
+  **Acceptance Criteria**：
+  - [ ] 5.4 节存在且 ≥ 140 行
+  - [ ] 至少 1 个 mermaid 时序图
+  - [ ] 至少 2 个表格
+  - [ ] 至少 6 个 `####` 四级分层
+  - [ ] **接口设计小节存在 ∧ 接口一览表 ≥ 1 张 ∧ 接口数 ≥ 6**
+
+  **QA Scenarios**：
+  ```
+  Scenario: 5.4 运行环境抽象层完整
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.4/,/^### 5\.5/' "$DOC" | wc -l   # ≥ 140
+      2. awk '/^### 5\.4/,/^### 5\.5/' "$DOC" | grep -c 'mermaid'  # ≥ 1
+      3. awk '/^### 5\.4/,/^### 5\.5/' "$DOC" | grep -c '^|'       # ≥ 8（两个表至少各4行）
+      4. awk '/^### 5\.4/,/^### 5\.5/' "$DOC" | grep -ic 'envir\|inifilereader\|图形仿真运行环境'  # = 0
+      5. awk '/^### 5\.4/,/^### 5\.5/' "$DOC" | grep -c '接口设计'  # ≥ 1
+      6. awk '/^### 5\.4/,/^### 5\.5/' "$DOC" | awk '/接口设计/,/^### /' | grep -c '^|'  # ≥ 7
+    Evidence: .sisyphus/evidence/task-10-chapter5_4.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 11. 第5.5章「命令行仿真运行器」详细设计
+
+  **What to do**：
+  - 在文档末尾追加 `### 5.5 命令行仿真运行器（CSU-CMDR）`
+  - 概述：提供面向脚本与批处理的非图形化仿真执行入口，支持单次运行、批量参数扫描、回归测试场景
+  - 命令行参数解析：支持 `-c <配置名>`、`-r <运行序号>`、`-u <环境名>`、`-l <模型库>` 等标准化参数（**仅描述功能不出现 opp_run 字面量**）
+  - 运行控制：单运行模式、参数研究批量运行模式、Express 高速模式、Normal 标准模式
+  - 进度显示：基于行打印的进度反馈（不涉及任何图形/三维显示）
+  - 表达式求值与日志：每事件一行的状态打印、运行结束的统计摘要打印
+  - 回归测试支撑：作为测试框架的执行后端
+  - 退出码约定：0 = 正常结束、1 = 用户中断、2 = 运行错误、3 = 配置错误
+  - mermaid 状态图：启动 → 加载配置 → 实例化模型 → 事件循环 → 正常结束/异常退出
+  - 表格：命令行参数清单（参数、含义、示例）
+  - **接口设计（必含小节 5.5.X「接口设计」）**：
+    - 在本章末尾增设 `#### 5.5.X 接口设计` 小节，覆盖**命令行运行器对外暴露的接口**（命令行参数接口、退出码接口、进度反馈接口、与运行环境抽象层的挂接接口）。
+    - 必须包含**接口一览表**（≥ 1 张），列名同前。
+    - 必须列出 ≥ 6 个接口，至少覆盖以下类别：(1) 命令行参数解析接口（如 `解析参数(argc, argv)→Options`，覆盖 `-c <配置名>`、`-r <运行序号>`、`-u <环境名>`、`-l <模型库>`、`--scheduler` 等参数）；(2) 运行模式控制接口（如 `选择运行模式(Express/Normal/Debug)`、`设置参数研究迭代器()→RunIterator`）；(3) 进度反馈接口（如 `打印进度(t_sim, t_wall, evt_count)`、`打印事件状态(evt_kind, fields)`）；(4) 退出码契约接口（如 `规约退出码(0=正常 / 1=用户中断 / 2=运行错误 / 3=配置错误)`）；(5) 批量执行入口接口（如 `批量运行(config_name, run_filter)→ResultSummary`，**与回归测试框架的契约**）；(6) 调度器选择接口（**该接口为 5.9 混合调度子系统的扩展点**，如 `安装调度器(scheduler_class_name)`）。
+    - **每个接口**需说明：调用前置条件、典型调用场景、错误处理策略、与配置项的关系。
+    - 接口稳定性约束：命令行参数与退出码属于**强稳定接口**（脚本与构建系统依赖）；调度器选择属于**扩展点接口**。
+    - **不写真实代码片段**。
+
+  **Must NOT do**：
+  - 不出现 `cmdenv` 子目录名、`opp_run` 工具名
+  - 不出现"图形界面"、"窗口"、"GUI" 等字样（即使在对比说明中也不出现）
+  - 不出现三维相关任何内容
+  - 接口签名以中文+伪代码描述，**不出现 C++ 真实语法**
+
+  **Recommended Agent Profile**：
+  - **Category**: `writing`
+  - **Skills**: 无
+
+  **Parallelization**：
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 3（与 T12、T13 并行）
+  - **Blocks**: T14
+  - **Blocked By**: T10（依赖运行环境抽象层定义）
+
+  **References**：
+  - 子系统目录：`src/cmdenv/`（含 `cmdenv.cc`、`cmdenv.h`、`fakegui.cc`、`fakegui.h`）
+  - 参数处理：`src/envir/args.cc`
+  - 术语映射表
+
+  **Acceptance Criteria**：
+  - [ ] 5.5 节存在且 ≥ 100 行
+  - [ ] 至少 1 个 mermaid 状态图
+  - [ ] 至少 1 个命令行参数表（≥ 6 行）
+  - [ ] 至少 5 个 `####` 四级分层
+  - [ ] **接口设计小节存在 ∧ 接口一览表 ≥ 1 张 ∧ 接口数 ≥ 6**
+
+  **QA Scenarios**：
+  ```
+  Scenario: 5.5 命令行运行器完整且无图形/三维内容
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.5/,/^### 5\.6/' "$DOC" | wc -l   # ≥ 100
+      2. awk '/^### 5\.5/,/^### 5\.6/' "$DOC" | grep -c 'mermaid'  # ≥ 1
+      3. awk '/^### 5\.5/,/^### 5\.6/' "$DOC" | grep -ic 'cmdenv\|opp_run\|GUI\|窗口\|图形界面'  # = 0
+      4. awk '/^### 5\.5/,/^### 5\.6/' "$DOC" | grep -iEc '三维|3D|opengl|webgl'  # = 0
+      5. awk '/^### 5\.5/,/^### 5\.6/' "$DOC" | grep -c '接口设计'  # ≥ 1
+      6. awk '/^### 5\.5/,/^### 5\.6/' "$DOC" | awk '/接口设计/,/^### /' | grep -c '^|'  # ≥ 7
+    Evidence: .sisyphus/evidence/task-11-chapter5_5.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 12. 第5.6章「事件日志记录与回放子系统」详细设计
+
+  **What to do**：
+  - 在文档末尾追加 `### 5.6 事件日志记录与回放子系统（CSU-EVLG）`
+  - 概述：以紧凑的文本格式记录仿真运行中的所有事件，供事后审计、调试、回放使用
+  - 日志条目类型：模块创建/销毁、连接建立、事件调度、消息发送/接收、自消息、参数变化等（参考 `src/eventlog/eventlogentries.cc`，**仅描述类别**）
+  - 日志写入器：基于行格式的事件日志写入器（脱敏自 eventlogwriter.pl 生成的代码）
+  - 日志读取与索引：事件日志读取器、按事件号/仿真时间的索引、模块过滤器
+  - 日志压缩与切片：按时间窗口/按事件数量分片、可配置详细级别
+  - 与运行环境的集成：通过运行环境抽象层的"事件日志文件管理器"挂接
+  - mermaid 数据流图：仿真内核 → 事件钩子 → 日志格式化 → 文件落盘 → 离线读取与过滤
+  - 表格：日志条目类型清单（类型代码、含义、典型字段）
+  - 表格：日志详细级别（无、错误、关键事件、全部）
+  - **接口设计（必含小节 5.6.X「接口设计」）**：
+    - 在本章末尾增设 `#### 5.6.X 接口设计` 小节，覆盖**事件日志子系统对外暴露的接口**（写入侧、读取侧、配置侧）。
+    - 必须包含**接口一览表**（≥ 1 张），列名同前。
+    - 必须列出 ≥ 6 个接口，至少覆盖以下类别：(1) 日志写入接口（如 `打开日志(path, level)→Writer`、`记录条目(writer, kind, fields)`、`关闭日志(writer)`）；(2) 与运行环境抽象层挂接接口（如 `安装事件钩子(simulation)`，由 5.4 节"事件日志文件管理器"调用）；(3) 日志读取接口（如 `打开日志(path)→Reader`、`按事件号定位(reader, evt_no)→Entry`、`按仿真时间定位(reader, t_sim)→Entry`、`按模块过滤(reader, module_filter)→Iterator`）；(4) 索引接口（如 `构建索引(path)→IndexFile`、`使用索引快速定位(idx, query)`）；(5) 详细级别配置接口（如 `设置详细级别(level)`、`配置分片策略(by_time/by_count, threshold)`）；(6) 离线分析接口（如 `导出为文本回放(path, filter, out)`、`统计事件分布(reader)→Histogram`）。
+    - **每个接口**需说明：调用前置条件、调用方、错误处理策略、性能特性（写入是否阻塞主循环）。
+    - 接口稳定性约束：日志文件格式属于**版本化稳定接口**（跨版本可读性）；写入器钩子接口属于**扩展点接口**（与 5.4 挂接）。
+    - **不写真实代码片段**。
+
+  **Must NOT do**：
+  - 不出现 `eventlog` 子目录名
+  - 不出现 `.elog` 具体文件扩展名（统一为"事件日志文件"）
+  - 不引入任何回放可视化的三维或图形描述（仅做文本/表格回放）
+  - 接口签名以中文+伪代码描述，**不出现 C++ 真实语法**
+
+  **Recommended Agent Profile**：
+  - **Category**: `writing`
+  - **Skills**: 无
+
+  **Parallelization**：
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 3（与 T11、T13 并行）
+  - **Blocks**: T14
+  - **Blocked By**: T10（依赖运行环境抽象层）
+
+  **References**：
+  - 子系统目录：`src/eventlog/`（含 `event.cc`、`eventlog.cc`、`eventlogentries.cc`、`enums.cc`）
+  - 写入器：`src/common/` 下相关辅助
+  - 术语映射表
+
+  **Acceptance Criteria**：
+  - [ ] 5.6 节存在且 ≥ 110 行
+  - [ ] 至少 1 个 mermaid 数据流图
+  - [ ] 至少 2 个表格
+  - [ ] 至少 5 个 `####` 四级分层
+  - [ ] **接口设计小节存在 ∧ 接口一览表 ≥ 1 张 ∧ 接口数 ≥ 6**
+
+  **QA Scenarios**：
+  ```
+  Scenario: 5.6 事件日志子系统完整
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.6/,/^### 5\.7/' "$DOC" | wc -l   # ≥ 110
+      2. awk '/^### 5\.6/,/^### 5\.7/' "$DOC" | grep -c 'mermaid'  # ≥ 1
+      3. awk '/^### 5\.6/,/^### 5\.7/' "$DOC" | grep -ic 'eventlog\b\|\.elog'  # = 0
+      4. awk '/^### 5\.6/,/^### 5\.7/' "$DOC" | grep -iEc '三维|3D|opengl|可视化回放'  # = 0
+      5. awk '/^### 5\.6/,/^### 5\.7/' "$DOC" | grep -c '接口设计'  # ≥ 1
+      6. awk '/^### 5\.6/,/^### 5\.7/' "$DOC" | awk '/接口设计/,/^### /' | grep -c '^|'  # ≥ 7
+    Evidence: .sisyphus/evidence/task-12-chapter5_6.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 13. 第5.7章「仿真结果记录与分析子系统」详细设计
+
+  **What to do**：
+  - 在文档末尾追加 `### 5.7 仿真结果记录与分析子系统（CSU-RSAN）`
+  - 概述：负责仿真结果（标量、向量、统计、直方图）的采集、持久化、查询、聚合、导出
+  - 数据模型：结果项（标量、向量、统计、直方图）、运行属性、文件元数据
+  - 文件格式：基于行的文本结果格式（标量文件、向量文件、向量索引文件）、结构化二进制格式（SQLite 表结构）
+  - 读取层：结果文件管理器、向量文件读取器（带索引）、结果项 ID 列表过滤
+  - 写入层：标量结果写入器、向量结果写入器、SQLite 写入器
+  - 分析与导出：聚合分析、过滤、CSV/JSON/SQLite 导出器（**严禁出现任何"图表绘制"、"曲线图"、"散点图"、"三维"等可视化字样**，仅描述数据导出能力，由外部分析工具完成可视化）
+  - 工具入口：结果分析命令行工具（脱敏自 opp_scavetool）
+  - mermaid 数据流图：仿真运行 → 结果记录器 → 多格式落盘 → 索引构建 → 命令行查询/导出
+  - 表格：结果数据类型清单（类型、字段、文件格式）
+  - 表格：导出格式清单（CSV、JSON、SQLite，含适用场景）
+  - **接口设计（必含小节 5.7.X「接口设计」）**：
+    - 在本章末尾增设 `#### 5.7.X 接口设计` 小节，覆盖**结果记录与分析子系统对外暴露的接口**（写入侧、读取侧、查询/导出侧、命令行侧）。
+    - 必须包含**接口一览表**（≥ 1 张），列名同前。
+    - 必须列出 ≥ 6 个接口，至少覆盖以下类别：(1) 标量结果写入接口（如 `写入标量(component, name, value, attrs)`，由 5.4 运行环境层"标量结果写入器"调用）；(2) 向量结果写入接口（如 `注册向量(component, name)→vec_id`、`写入向量样本(vec_id, t_sim, value)`、`完成向量(vec_id)`）；(3) 文件加载接口（如 `加载结果文件(path)→FileHandle`，支持文本与 SQLite 双格式）；(4) 数据查询接口（如 `按运行/模块/名称过滤(filter)→IdList`、`读取向量数据(id, [t_start, t_end])→Series`、`读取标量(id)→ScalarValue`）；(5) 聚合分析接口（如 `分组聚合(idlist, group_by, agg_fn)→Table`、`合并多次运行(file_list)→MergedDataset`）；(6) 导出接口（如 `导出CSV(idlist, out)`、`导出JSON(idlist, out)`、`导出SQLite(idlist, out)`，**严禁包含图形/绘图相关导出接口**）；(7) 命令行入口（如 `结果分析命令行工具(argc, argv)`，脱敏自 opp_scavetool）。
+    - **每个接口**需说明：调用前置条件、调用方（仿真内核/外部分析工具/构建系统）、错误处理策略、文件格式版本契约。
+    - 接口稳定性约束：文件格式与 CSV/JSON/SQLite 导出 schema 属于**强稳定接口**（外部分析工具长期依赖）；写入接口属于**扩展点接口**（5.4 派生）。
+    - **不写真实代码片段**，**不在接口签名中暗示任何绘图能力**。
+
+  **Must NOT do**（**本任务三维守护最严格**）：
+  - 不出现 `scave` 子目录名、`opp_scavetool` 工具名
+  - 不出现 `三维`、`3D`、`OpenGL`、`WebGL`、`立体可视`、`OSG`、`Three.js`、`地球三维`、`星座三维`、`轨道三维`、`图表绘制`、`曲线图`、`散点图`、`饼图`、`柱状图`、`热力图`、`绘图引擎` 等任何与"绘图/可视化"相关词汇
+  - 仅描述"结果数据导出能力"，绘图由"外部分析工具"完成（不展开外部工具）
+  - 不引入 Python/Pandas/Matplotlib 名称（保持中性"外部分析工具"表述）
+  - 接口签名以中文+伪代码描述，**不出现 C++ 真实语法**，且**接口签名中不出现绘图动词**（绘制/渲染/show/plot/chart）
+
+  **Recommended Agent Profile**：
+  - **Category**: `writing`
+  - **Skills**: 无
+
+  **Parallelization**：
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 3（与 T11、T12 并行）
+  - **Blocks**: T14
+  - **Blocked By**: T10（依赖运行环境抽象层）
+
+  **References**：
+  - 子系统目录：`src/scave/`（含 `resultfilemanager.cc`、`resultitems.cc`、`idlist.cc`、各种 `*reader.cc`、`*writer.cc`、`*exporter.cc`、`indexedvectorfilereader.cc`、`vectorfileindex.cc`、`opp_scavetool.cc`）
+  - 输出器实现：`src/envir/` 下 `outscalarmgr.cc`、`outvectormgr.cc`、`sqliteout*.cc`
+  - 术语映射表
+
+  **Acceptance Criteria**：
+  - [ ] 5.7 节存在且 ≥ 130 行
+  - [ ] 至少 1 个 mermaid 数据流图
+  - [ ] 至少 2 个表格（数据类型 + 导出格式）
+  - [ ] 至少 6 个 `####` 四级分层
+  - [ ] 三维/绘图禁词命中数 = 0
+  - [ ] **接口设计小节存在（`#### 5.7.X 接口设计`）∧ 接口一览表 ≥ 1 张 ∧ 接口数 ≥ 6 ∧ 接口签名中无绘图动词**
+
+  **QA Scenarios**：
+  ```
+  Scenario: 5.7 结果分析子系统完整且严格脱"绘图/三维"
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.7/,/^## /' "$DOC" | wc -l   # ≥ 130
+      2. awk '/^### 5\.7/,/^## /' "$DOC" | grep -c 'mermaid'  # ≥ 1
+      3. awk '/^### 5\.7/,/^## /' "$DOC" | grep -ic 'scave\|opp_scavetool'  # = 0
+      4. awk '/^### 5\.7/,/^## /' "$DOC" | grep -iEc '三维|3D|opengl|webgl|立体可视|three\.js|osg|图表绘制|曲线图|散点图|饼图|柱状图|热力图|绘图引擎'  # = 0
+      5. awk '/^### 5\.7/,/^## /' "$DOC" | grep -ic 'matplotlib\|pandas'  # = 0
+    Evidence: .sisyphus/evidence/task-13-chapter5_7.txt
+
+  Scenario: 5.7 接口设计小节齐备且接口签名脱绘图
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.7/,/^## /' "$DOC" | grep -c '接口设计'                                  # ≥ 1
+      2. awk '/^#### 5\.7\.[0-9]+ 接口设计/,/^#### |^### /' "$DOC" | grep -c '^|'              # ≥ 8（表头+分隔+≥6接口行）
+      3. awk '/^#### 5\.7\.[0-9]+ 接口设计/,/^#### |^### /' "$DOC" | grep -iEc '绘制|渲染|plot|chart|render|show'  # = 0
+      4. awk '/^#### 5\.7\.[0-9]+ 接口设计/,/^#### |^### /' "$DOC" | grep -iEc 'std::|template<|namespace |->'  # = 0（脱C++真实语法）
+    Evidence: .sisyphus/evidence/task-13-chapter5_7-interfaces.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 13b. 第5.8章「分布式并行仿真子系统」详细设计 ★ 新增
+
+  **What to do**：
+  - 在文档末尾追加 `### 5.8 分布式并行仿真子系统（CSU-PSIM）`
+  - **概述**：将单机离散事件仿真扩展为多进程/多节点并行执行的子系统，支撑大规模卫星星座（成百上千节点、数十条馈电链路）的高性能仿真。整体仿真模型按 NED 配置参数被划分为若干**逻辑进程（Logical Process, LP）**，每个 LP 独立持有自己的事件队列与本地模块子集，进程间通过抽象通信原语交换消息并通过同步协议保证因果一致性。
+  - **5.8.1 设计目标与定位**：
+    - 在不修改业务模型代码（保持 handleMessage/initialize 接口不变）的前提下，按照配置文件提示自动完成模型分区、跨分区门连接的代理化、消息序列化与时间同步。
+    - 同一份 NED 与 msg 模型既可在单机串行模式下运行，也可在并行模式下运行，差异仅由"运行环境抽象层"读取的配置项决定。
+    - 与外部分析工具的结果文件协议保持兼容（每个分区写入独立结果文件，按分区编号区分）。
+  - **5.8.2 体系结构分层**：
+    采用四层抽象（自底向上）：
+    1. **通信抽象层**：定义统一的进程间通信原语（点对点发送/接收、广播、屏障同步、阻塞/非阻塞模式）。
+    2. **同步协议层**：在通信原语之上实现时间推进的因果一致性算法。
+    3. **分区管理层**：负责模型实例化时按分区编号筛选本地模块、为跨分区门安装代理、转发跨分区消息。
+    4. **运行控制层**：作为整体协调者，挂接到仿真生命周期（启动/事件循环/收尾）的相应钩子。
+    用 mermaid `flowchart TB` 表达上下层依赖关系。
+  - **5.8.3 通信抽象层（CSU-PSIM-COMM）**：
+    - **抽象通信接口**（脱敏自 `cParsimCommunications`）：定义 `init/shutdown/send/receive/broadcast/barrier/getNumPartitions/getProcId` 等纯虚方法，作为后端无关的统一契约。
+    - **通信缓冲区**（脱敏自 `cCommBuffer`/`cMemCommBuffer`）：抽象基类提供 packXxx/unpackXxx 系列序列化原语，覆盖基本类型、字符串、字节数组、子对象（递归调用 cObject::parsimPack）。
+    - **后端实现 1：消息传递接口（MPI）后端**（脱敏自 `cMPICommunications`+`cMPICommBuffer`）：基于业界标准消息传递接口运行库，将 send/receive 映射到 MPI_Send/MPI_Recv，支持 MPI_Probe 探测，缓冲区使用 MPI_Pack/MPI_Unpack。
+    - **后端实现 2：命名管道后端**（脱敏自 `cNamedPipeCommunications`）：本机多进程场景，使用操作系统命名管道（POSIX 命名管道 / Windows 命名管道）建立 N×(N-1) 个单向通道。
+    - **后端实现 3：共享文件后端**（脱敏自 `cFileCommunications`）：通过共享磁盘目录中以文件形式落盘的消息进行非实时通信，主要用于离线调试与无消息传递接口环境的最小化部署。
+    - 表格：通信后端对比（性能、跨主机能力、依赖、典型场景）。
+    - 表格：消息标签约定（用户消息、空消息、屏障信号、终止通告、异常通告等）。
+  - **5.8.4 同步协议层（CSU-PSIM-SYNC）**：
+    - **抽象同步协议接口**（脱敏自 `cParsimSynchronizer`）：定义钩子 `startRun/endRun/processOutgoingMessage/getNextEvent/processReceivedMessage` 等。
+    - **保守同步协议——空消息协议（Null Message Protocol，CMB 算法）**（脱敏自 `cNullMessageProtocol`）：经典 Chandy-Misra-Bryant 算法实现，每个 LP 维护对每个邻居 LP 的"安全到达时间"，定期或按需向邻居广播空消息以推进对端时间。配合**前瞻量（lookahead）**避免死锁。
+    - **理想同步协议（Ideal Simulation Protocol，ISP）**（脱敏自 `cIdealSimulationProtocol`+`cISPEventLogger`）：以串行运行的事件日志为参考序列，复算并行版本下的最优同步开销，用于评测并行仿真器自身的同步效率（性能上界估算）。
+    - **无同步协议**（脱敏自 `cNoSynchronization`）：仅做消息转发不做时间同步，仅适用于已被证明无因果违例的特定模型（如严格单向流水线）。
+    - mermaid 时序图：两个 LP 之间空消息协议的一次交互（含前瞻量计算、空消息触发、本地事件推进）。
+    - 表格：同步协议适用性对比（保守/乐观/理想/无、是否需要前瞻量、是否支持回滚、典型适用模型）。
+  - **5.8.5 前瞻量层（CSU-PSIM-LOOK）**：
+    - **抽象前瞻量计算器接口**（脱敏自 `cNMPLookahead`）：返回某条出向链路上"未来不会发送时间早于 t+L 的消息"的安全保证 L。
+    - **链路时延前瞻**（脱敏自 `cLinkDelayLookahead`）：扫描代理门所连接信道的最小传播时延，将其作为该方向前瞻量。
+    - **高级链路时延前瞻**（脱敏自 `cAdvLinkDelayLookahead`）：在链路时延基础上叠加模块自身的最早可输出时刻分析，得到更紧的前瞻量上界，提升保守同步并行度。
+    - 表格：前瞻量算法对比（精度、计算开销、模型要求）。
+  - **5.8.6 分区管理层（CSU-PSIM-PART）**：
+    - **分区协调器**（脱敏自 `cParsimPartition`）：构建期遍历完整的 NED 网络，按 `partition-id` 参数判定每个模块所属 LP；本 LP 仅实例化本地模块，远程模块由占位模块取代。
+    - **占位模块**（脱敏自 `cPlaceholderModule`）：在本 LP 中代表远程 LP 上的模块，仅暴露其门定义但不执行任何业务逻辑；handleMessage 钩子被禁用。
+    - **代理门**（脱敏自 `cProxyGate`）：与占位模块配对的门类型，将本 LP 中模块向占位模块发送的消息拦截下来，序列化后通过通信抽象层转发到远端真实模块所在 LP。
+    - **跨分区消息转发**：本地模块 emit/send → 命中代理门 → 序列化为通信缓冲区 → 携带源/宿模块编号、门编号、目标到达时刻等元数据 → 通过同步协议层 processOutgoingMessage → 通信抽象层投递。
+    - **跨分区消息接收**：通信抽象层接收到字节流 → 反序列化为 cMessage 派生类 → 同步协议层 processReceivedMessage 决定是否调度（保守协议要求到达时间 ≥ 当前安全时间） → 注入本地事件队列。
+    - **异常分发**：远端运行错误（脱敏自 `cReceivedException`）通过特定标签广播至所有 LP，触发整体仿真终止。
+    - mermaid 数据流图：本地模块 → 代理门 → 序列化 → 通信抽象层 → 网络/管道/文件 → 对端通信抽象层 → 反序列化 → 同步协议层 → 对端事件队列。
+  - **5.8.7 运行控制层与生命周期挂接**：
+    - 启动阶段：解析配置中"并行仿真启用"开关、分区数、所选通信后端、所选同步协议；初始化通信抽象层（建立连接/同步握手）；解析模型时按分区筛选实例化。
+    - 事件循环阶段：在原 `cSimulation::doOneEvent` 之前插入"接收远端消息"钩子；在每次事件执行后检查"是否需向邻居发送空消息"。
+    - 屏障与终止：检测到 cTerminationException 或事件队列耗尽时触发跨 LP 屏障，确保所有 LP 一致进入收尾。
+    - 收尾阶段：调用所有本地模块 finish()；本 LP 写入独立结果文件；执行通信抽象层 shutdown。
+    - 表格：生命周期阶段 × 并行扩展点（钩子、所属层、关键操作）。
+  - **5.8.8 配置与运维**：
+    - 配置项分级：全局开关、通信后端选择、同步协议选择、前瞻量算法选择、分区数与映射、空消息触发频率等。
+    - 运行命令示意（**仅描述参数语义，不出现品牌工具名**）：通过命令行参数 `-p N` 指定分区数，配合外部消息传递接口启动器（如 `mpirun -np N`）拉起 N 个仿真运行器进程。
+    - 故障诊断：通信超时、序列化失败、占位模块被误调度、前瞻量违例（保守协议下不应发生）等典型故障的检测点与日志输出。
+    - 表格：配置项清单（项名、默认值、取值域、所属层）。
+  - **5.8.9 与其他子系统的关系**：
+    - 依赖**通用基础库**的字符串/异常/读写锁。
+    - 依赖**仿真内核**的 cMessage/cModule/cGate/cSimulation 公共抽象（**该子系统不修改内核语义**，仅插入扩展点）。
+    - 依赖**仿真运行环境抽象层**的配置项体系；自身向其注册若干 Per-Run 与 Per-Object 配置项。
+    - 与**事件日志子系统**协同：理想同步协议复用事件日志作为参考序列。
+    - 与**结果记录与分析子系统**协同：每个 LP 独立写入结果文件，分析阶段离线合并。
+    - mermaid 依赖图：CSU-PSIM 与上下游子系统的依赖关系。
+  - **5.8.10 接口设计**（必含小节 `#### 5.8.10 接口设计`）：
+    - 在本章末尾增设 `#### 5.8.10 接口设计` 小节，覆盖**分布式并行仿真子系统对外暴露的接口**（通信抽象、缓冲区序列化、同步协议钩子、前瞻量计算、分区管理、跨分区消息转发、生命周期挂接、配置）。
+    - 必须包含**接口一览表**（≥ 1 张），列名：`接口标识 | 接口类别 | 关键操作签名（伪代码） | 数据传递方向 | 调用方 | 备注`。
+    - 必须列出 ≥ 6 个接口，至少覆盖以下类别：
+      (1) **通信原语接口**（脱敏自 cParsimCommunications）：如 `初始化通信(进程数, 配置)`、`发送字节流(目标进程, 标签, 缓冲区)`、`阻塞接收(标签过滤)→缓冲区`、`屏障同步()`；
+      (2) **缓冲区序列化接口**（脱敏自 cCommBuffer）：如 `打包基本类型(类型, 值)`、`打包子对象(cObject*)`、`解包基本类型(类型)→值`、`解包子对象()→cObject*`；
+      (3) **同步协议钩子接口**（脱敏自 cParsimSynchronizer）：如 `运行启动钩子(配置)`、`处理出向消息钩子(消息, 目的LP, 到达时刻)`、`取下一安全事件钩子()→事件`、`处理接收消息钩子(消息)`；
+      (4) **前瞻量计算接口**（脱敏自 cNMPLookahead）：如 `计算前瞻量(出向链路, 当前仿真时刻)→前瞻值`、`通告前瞻量更新(链路, 新值)`；
+      (5) **分区管理接口**（脱敏自 cParsimPartition）：如 `按分区编号筛选模块(NED网络, 本LP编号)→本地模块集`、`为跨分区门安装代理(网络)`、`查询模块所属LP(模块编号)→LP编号`；
+      (6) **跨分区消息转发接口**（脱敏自 cProxyGate / cPlaceholderModule）：如 `代理门转发(本地消息)→序列化字节流`、`占位模块接收(序列化字节流, 仿真时刻)`、`异常跨分区广播(异常对象)`；
+      (7) **生命周期挂接接口**（与 5.4 运行环境抽象层契约）：如 `事件循环前钩子()`（接收远端消息、推进安全时间）、`事件后钩子(事件)`（按需触发空消息）、`仿真终止屏障()`、`收尾结果落盘(LP编号, 输出目录)`；
+      (8) **配置项注册接口**（与 5.4 配置项体系契约）：如 `注册Per-Run配置项(名称, 类型, 默认值, 取值域)`、`注册Per-Object配置项(名称, 类型, 默认值)`，覆盖通信后端选择、同步协议选择、前瞻量算法选择、分区数与映射等。
+    - **每个接口**需说明：调用前置条件、调用方（仿真内核/运行环境抽象层/通信后端实现/同步协议派生类）、错误处理策略、并行边界（哪一侧 LP 调用、是否阻塞）。
+    - 接口稳定性约束：通信原语接口与同步协议钩子接口为**演进接口**（允许新增后端/协议派生类，但已有方法签名稳定）；缓冲区序列化接口为**强稳定接口**（涉及跨进程线协议）；分区管理与代理门接口为**内部接口**（不对模型层暴露）；配置项接口为**扩展点接口**（5.4 派生）。
+    - **不写真实代码片段**，**接口签名以中文+伪代码描述**，**不出现 C++ 真实语法**（`template<>`、`std::shared_ptr`、命名空间分隔符等），**不出现品牌产品名与商业 MPI 实现品牌名**。
+
+  **Must NOT do**：
+  - 不出现 `parsim` 子目录名、不出现品牌产品名（omnetpp 等）
+  - 不出现具体源码文件名（如 `cnullmessageprot.cc`），所有内核类用脱敏后的"中文名（脱敏自 cXxx）"括注一次后续仅用中文名
+  - 不出现三维相关任何内容
+  - 不展开商业 MPI 实现的品牌名（如 OpenMPI/MPICH/IntelMPI），统一用"消息传递接口运行库"
+  - 不写出 C++ 代码片段
+  - 不引入"乐观同步/Time Warp/Rollback"的实现细节（本平台未实现，仅可在与保守同步对比表中提及为"理论可选项"）
+  - 接口签名以中文+伪代码描述，**不出现 C++ 真实语法**（`template<>`、`std::shared_ptr`、`namespace ::`、`->` 等），**不在接口签名中暗示乐观同步/回滚语义**
+
+  **Recommended Agent Profile**：
+  - **Category**: `writing` — 长文档章节撰写
+  - **Skills**: 无（直接写作）
+
+  **Parallelization**：
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 3（与 T11、T12、T13 并行）
+  - **Blocks**: T14
+  - **Blocked By**: T1（术语映射表）、T8（仿真内核）、T10（运行环境抽象层）
+
+  **References**：
+  - 子系统目录：`src/sim/parsim/`（含 `cparsimcomm.h/cc`、`cparsimsynchr.h/cc`、`cparsimpartition.h/cc`、`cparsimprotocolbase.h/cc`、`cnullmessageprot.h/cc`、`cidealsimulationprot.h/cc`、`cnosynchronization.h/cc`、`cmpicomm.h/cc`、`cmpicommbuffer.h/cc`、`cnamedpipecomm.h/cc`、`cnamedpipecomm-win.cc`、`cfilecomm.h/cc`、`clinkdelaylookahead.h/cc`、`cadvlinkdelaylookahead.h/cc`、`cnmplookahead.h`、`cplaceholdermod.h/cc`、`cproxygate.h/cc`、`creceivedexception.h/cc`、`cispeventlogger.h/cc`、`messagetags.h`、`parsimindex.h`、`parsimutil.h/cc`）
+  - 公共头文件：`include/omnetpp/cparsimcomm.h`
+  - 通信缓冲区基类：`include/omnetpp/ccommbuffer.h`、`src/sim/cmemcommbuffer.cc`
+  - 术语映射表 `.sisyphus/scratch/terminology-map.md`
+  - 模板章节 5.X
+  - 学术参考：Chandy-Misra-Bryant 空消息协议（Communications of the ACM, 1981）；理想同步协议（PADS 文献中常见的 ISP 概念）
+
+  **Acceptance Criteria**：
+  - [ ] 5.8 节存在
+  - [ ] 节内行数 ≥ 200
+  - [ ] 至少 2 个 mermaid 图（体系结构分层 + 跨分区消息流 / 同步协议时序）
+  - [ ] 至少 4 个表格（通信后端对比、同步协议对比、前瞻量算法对比、配置项清单 之中至少 4 项）
+  - [ ] 至少 9 个 `####` 四级分层（覆盖 5.8.1~5.8.9）
+  - [ ] 三维/绘图禁词命中数 = 0
+  - [ ] `parsim` / `omnetpp` / 具体源码文件名命中数 = 0
+  - [ ] **接口设计小节存在（`#### 5.8.10 接口设计`）∧ 接口一览表 ≥ 1 张 ∧ 接口数 ≥ 6 ∧ 覆盖 6 类（通信原语/缓冲区序列化/同步协议钩子/前瞻量/分区管理/跨分区转发）**
+
+  **QA Scenarios**：
+  ```
+  Scenario: 5.8 分布式并行仿真子系统结构完整且严格脱敏
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.8/,/^## /' "$DOC" | wc -l                            # ≥ 200
+      2. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c 'mermaid'                 # ≥ 2
+      3. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '^####'                   # ≥ 9
+      4. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '^|'                      # ≥ 16（4个表至少各4行）
+      5. awk '/^### 5\.8/,/^## /' "$DOC" | grep -ic 'parsim\|omnetpp\|cnullmessageprot\|cidealsimulationprot\|cmpicomm\|cnamedpipecomm\|cfilecomm\|cplaceholdermod\|cproxygate'  # = 0
+      6. awk '/^### 5\.8/,/^## /' "$DOC" | grep -iEc '三维|3D|opengl|webgl|立体可视|three\.js|osg'  # = 0
+      7. awk '/^### 5\.8/,/^## /' "$DOC" | grep -ic 'openmpi\|mpich\|intelmpi'  # = 0（避免商业 MPI 品牌）
+    Evidence: .sisyphus/evidence/task-13b-chapter5_8.txt
+
+  Scenario: 5.8 必含核心概念关键词
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '逻辑进程'                 # ≥ 2
+      2. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '空消息'                   # ≥ 2
+      3. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '前瞻量'                   # ≥ 3
+      4. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '占位模块'                 # ≥ 2
+      5. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '代理门'                   # ≥ 2
+      6. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '理想同步协议'             # ≥ 1
+      7. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '消息传递接口'             # ≥ 2
+      8. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '命名管道'                 # ≥ 1
+    Evidence: .sisyphus/evidence/task-13b-keywords.txt
+
+  Scenario: 5.8 接口设计小节齐备且脱 C++ 真实语法
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.8/,/^## /' "$DOC" | grep -c '#### 5\.8\.10 接口设计'                  # = 1
+      2. awk '/^#### 5\.8\.10 接口设计/,/^### /' "$DOC" | grep -c '^|'                       # ≥ 8（表头+分隔+≥6接口行）
+      3. awk '/^#### 5\.8\.10 接口设计/,/^### /' "$DOC" | grep -Ec '通信原语|缓冲区|同步协议|前瞻量|分区|代理门|占位'  # ≥ 6（六类覆盖）
+      4. awk '/^#### 5\.8\.10 接口设计/,/^### /' "$DOC" | grep -iEc 'std::|template<|namespace |::|->'  # = 0（脱C++真实语法）
+      5. awk '/^#### 5\.8\.10 接口设计/,/^### /' "$DOC" | grep -ic 'openmpi\|mpich\|intelmpi'  # = 0
+    Evidence: .sisyphus/evidence/task-13b-chapter5_8-interfaces.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 13c. 第5.9章「混合调度子系统（连续时间推进与外部时间源接入）」详细设计 ★ 新增
+
+  **What to do**：
+  - 在文档中追加 `### 5.9 混合调度子系统（CSU-HSCH）`
+  - 写明该子系统的设计目标、9 个四级分层小节（5.9.1~5.9.9）：
+  - **5.9.1 设计目标与定位**：
+    - 在事件驱动的离散时间仿真主循环之上，提供**混合调度模式**，使平台能够同时支持：(a) 纯离散事件仿真（默认模式）、(b) 仿真时间-墙钟时间同步的实时仿真（用于硬件在环、人在回路、可视化驱动）、(c) 离散事件 + 连续时间状态推进的混合仿真（如卫星轨道动力学连续推进与通信事件离散触发并存）、(d) 接入外部时间源/外部事件源（如外部数据回放、传感器实时采集、外部仿真器联合仿真）。
+    - 标识：`CSU-HSCH-001` "混合调度子系统"
+    - 设计原则：**对仿真内核语义零侵入**——所有混合调度能力通过派生 `cScheduler` 抽象类实现，不修改事件队列与事件分发逻辑；连续时间推进通过模型层的"采样器模块"用周期自消息驱动，不引入独立的连续时间循环。
+
+  - **5.9.2 体系结构分层**：
+    - 用 mermaid `flowchart` 描绘子系统三层结构：
+      - **调度器抽象层**：`cScheduler` 抽象基类、默认事件队列调度器、实时同步调度器、外部事件源调度器、并行仿真调度器（与 5.8 节衔接）
+      - **时间映射层**：仿真时间-墙钟时间双向换算、缩放因子、起始时间锚点、暂停/恢复语义
+      - **连续状态推进层**：采样器模块基类、定步长积分调度、状态变量管理、零交叉检测占位（高级特性）
+    - 用 mermaid `classDiagram` 描绘"调度器抽象基类 ↔ 派生调度器（默认/实时/外部/并行）"的继承关系，以及"采样器模块 ↔ 仿真模块基类"的关系。
+
+  - **5.9.3 调度器抽象层（CSU-HSCH-SCHED）**：
+    - 抽象方法：`takeNextEvent()`（取下一事件，可阻塞等待外部条件）、`guessNextEvent()`（无副作用预览）、`putBackEvent()`（回退事件）、`startRun()`/`endRun()`/`executionResumed()`（生命周期钩子）。
+    - 默认实现：从事件队列直接取出时间最早事件，零等待。
+    - 注册机制：通过 `Register_Class()` 注册派生类；运行时通过配置项 `scheduler-class=...` 选择。
+    - 表 5.9-1 调度器对比表：列名 = 调度器名 / 时间推进策略 / 阻塞行为 / 适用场景 / 典型缩放因子。
+
+  - **5.9.4 实时同步调度器（CSU-HSCH-RT）**：
+    - 工作原理：每次取下一事件前，将"事件目标仿真时间"按缩放因子换算为"目标墙钟时间"，调用阻塞等待原语睡眠至该时刻；若已超时则立即返回（带超时计数告警）。
+    - 配置项：`realtimescheduler-scaling=N`（仿真时间相对墙钟时间倍速：>1 加速、<1 减速、=1 实时）、最大允许漂移阈值。
+    - 异常处理：墙钟落后于仿真时间过多（漂移超阈）→ 记录告警；信号中断 → 优雅退出。
+    - 典型应用：(1) 与可视化前端联动的仿真演示（按真实时间推进）；(2) 硬件在环仿真（仿真节奏与外部硬件节奏对齐）；(3) 人在回路决策注入。
+    - 表 5.9-2 实时调度配置项清单：项名 / 含义 / 默认值 / 取值约束。
+
+  - **5.9.5 外部事件源调度器（CSU-HSCH-EXT）**：
+    - 工作原理：在 `takeNextEvent()` 内部多路等待——同时监听 (a) 内部事件队列最早事件的目标时刻、(b) 外部事件源（套接字、命名管道、共享内存、消息总线）的可读事件；取较早者执行；外部事件被反序列化为 cMessage 派生类后注入事件队列以当前仿真时间立刻调度。
+    - 阻塞原语抽象：可读等待、超时等待、被外部"踢一脚"唤醒（用于实时数据流）。
+    - 典型应用：(1) 接入外部传感器/遥测实时数据流；(2) 与外部仿真器联合仿真（外部仿真器以约定协议发来事件）；(3) 外部数据回放（按文件中的时间戳序列驱动仿真前进）。
+    - **必须明确**：本子系统提供的外部事件源调度器是**通用框架**，具体协议适配（如 TCP、UDP、命名管道、共享内存）由模型层或用户编写的扩展派生类完成。
+
+  - **5.9.6 连续状态推进层（CSU-HSCH-CONT）**：
+    - **核心思想**：本平台采用**事件驱动的连续状态采样**——不在调度器层引入独立的连续时间求解器循环，而是由"采样器模块"在 `initialize()` 中以固定步长 Δt 调度自消息，每次自消息触发时执行：(1) 读取当前连续状态变量；(2) 调用模型层提供的状态导数计算；(3) 用积分算法（前向欧拉/RK4 等）推进一步；(4) 写回状态；(5) `scheduleAfter(Δt, msg)` 调度下一次采样。
+    - 优势：与离散事件无缝交错——连续状态采样事件就是普通事件，与离散通信事件统一在事件队列中按时间序处理；零额外同步成本。
+    - 表 5.9-3 积分算法对比：算法名（前向欧拉/RK4/隐式欧拉占位） / 阶数 / 稳定性 / 计算开销 / 推荐步长上限 / 适用场景。
+    - 状态变量管理：状态变量在采样器模块的成员中持有；多个状态变量构成状态向量；通过模块参数声明初值；通过结果记录信号 `emit()` 周期输出。
+    - 步长选择策略：固定步长（默认）/ 模型自适应步长（用户在状态导数计算中检测误差并请求缩短下一步）。
+    - **典型应用**——卫星轨道动力学连续推进：以 1 s 固定步长积分轨道方程（位置/速度/姿态四元数），在每个步长结束时与离散通信事件（链路建立、波束指向切换）共享时间轴。
+    - **零交叉检测**（高级特性占位）：当连续状态跨越某阈值时（如卫星越过地平线、波束覆盖区进入/离开），需触发离散事件；本期版本以"采样后状态比较 + 立即调度本时刻事件"的方式简化实现，不引入精确二分定位。
+
+  - **5.9.7 协程式过程化建模与事件驱动模式协同**：
+    - 仿真内核（5.2 节）支持两种模块编程风格：(a) `handleMessage(msg)` 事件驱动风格（推荐用于网络协议、状态机型行为）；(b) `activity()` 协程过程式风格（适用于"长时连续过程"的自然描述，如"等 3 s → 检查状态 → 等 1 s → 发送")。
+    - 协程层：基于 `cCoroutine` 与 `cContextSwitcher`，每个 activity 模块运行在独立栈上，通过 `wait(simtime)` / `receive()` 阻塞当前协程，主调度循环在事件触发时切换到对应协程栈继续执行。
+    - **混合建模建议**：连续状态推进 → 用采样器（handleMessage + 周期自消息）；长时过程化逻辑 → 用 activity；事件型协议 → 用 handleMessage。三种风格在同一个仿真模型中可以混用，由调度器统一编排。
+    - 表 5.9-4 三种建模风格对比：风格 / 适用场景 / 调试友好度 / 内存开销 / 性能开销。
+
+  - **5.9.8 与仿真内核及其他子系统的协同**：
+    - **依赖**：仅依赖**仿真内核**（5.2）的 `cScheduler` 抽象、`cMessage`/`cSimulation` 公共 API、生命周期事件；**不修改内核语义**。
+    - **与分布式并行仿真子系统（5.8）的关系**：并行仿真调度器是混合调度抽象的**另一派生**——它在 `takeNextEvent()` 内部插入跨分区同步协议（空消息/理想同步），与本子系统的实时调度器/外部事件源调度器**互斥**（同一次运行只能选用其中之一），但混合调度抽象层是它们的共同基类。
+    - **与命令行运行器（5.5）的衔接**：通过 `--scheduler` / `--rt-scaling` / `--ext-source` 命令行参数选择调度器并配置时间映射。
+    - **与事件日志子系统（5.6）的关系**：所有调度器派生类透明记录事件日志；实时与外部事件源调度器额外标注"墙钟时刻"字段以便回放对齐。
+    - **与结果记录子系统（5.7）的关系**：连续状态采样器通过 `emit()` 输出信号，由结果记录器以向量形式落盘，在分析阶段按时间序绘制状态曲线。
+    - mermaid 时序图：展示一次混合仿真运行中"实时调度器睡眠等待 → 外部传感器事件到达 → 注入事件队列 → 与离散事件共同推进 → 连续状态采样自消息触发 → 状态推进 → 信号 emit → 进入下一轮"的完整时序。
+
+  - **5.9.9 配置与运维**：
+    - 配置项清单（≥ 6 项）：`scheduler-class`、`realtimescheduler-scaling`、`realtimescheduler-max-drift`、`external-event-source-class`、`continuous-sampler-default-step`、`continuous-integrator-method`。
+    - 性能与稳定性约束：(1) 实时模式下若仿真负载超出实时能力 → 记录漂移并降级；(2) 连续步长 Δt 选择需平衡精度与开销，默认 1 s（轨道动力学），通信链路状态采样建议 100 ms；(3) 外部事件源调度器应设置看门狗，外部源失联超过阈值则切换至降级模式。
+    - 故障诊断：墙钟漂移超限、外部事件源连接断开、连续状态发散（积分不稳定）、采样器步长违例等典型故障的检测点与日志输出。
+
+  - **5.9.10 接口设计**（必含小节 `#### 5.9.10 接口设计`）：
+    - 在本章末尾增设 `#### 5.9.10 接口设计` 小节，覆盖**混合调度子系统对外暴露的接口**（调度器抽象、时间映射、外部事件源、连续状态采样器、协程、调度器注册、配置）。
+    - 必须包含**接口一览表**（≥ 1 张），列名：`接口标识 | 接口类别 | 关键操作签名（伪代码） | 数据传递方向 | 调用方 | 备注`。
+    - 必须列出 ≥ 6 个接口，至少覆盖以下类别：
+      (1) **调度器抽象接口**（脱敏自 cScheduler）：如 `取下一事件()→事件`（可阻塞等待外部条件）、`无副作用预览()→事件`、`回退事件(事件)`、`运行启动钩子()`、`运行结束钩子()`、`执行恢复钩子()`；
+      (2) **时间映射接口**：如 `仿真时刻换墙钟时刻(simtime, 缩放因子, 起始锚点)→walltime`、`墙钟时刻换仿真时刻(walltime, 缩放因子, 起始锚点)→simtime`、`阻塞睡眠至墙钟时刻(target_walltime, 超时上限)→是否被中断`、`查询当前漂移量()→drift`；
+      (3) **外部事件源接口**：如 `多路等待(内部最早时刻, 外部源句柄列表, 超时上限)→唤醒原因`、`从外部源读取一条事件(句柄)→cMessage派生`、`唤醒外部源等待(句柄)`、`外部源失联回调(句柄, 错误信息)`；
+      (4) **连续状态采样器接口**（采样器模块基类，模型层派生）：如 `采样初始化(初始状态向量, 步长Δt)`（在 initialize 中调用）、`计算状态导数(当前状态, 当前仿真时刻)→导数向量`（用户派生类实现）、`推进一步(状态, 导数, Δt, 算法)→新状态`（前向欧拉/RK4 等）、`输出状态信号(信号ID, 状态向量)`；
+      (5) **协程接口**（脱敏自 cCoroutine / cContextSwitcher）：如 `等待仿真时间(Δt)`（activity 中阻塞）、`接收消息(过滤条件)→cMessage`、`让出CPU至下一调度点()`、`协程切换至(目标协程句柄)`；
+      (6) **调度器注册接口**：如 `注册调度器派生类(类名, 工厂函数)`（脱敏自 Register_Class）、`按配置项实例化调度器(scheduler-class值)→cScheduler*`、`列出可用调度器()→类名列表`；
+      (7) **配置项注册接口**（与 5.4 配置项体系契约）：如 `注册Per-Run配置项(名称, 类型, 默认值, 取值约束)`，覆盖 `scheduler-class`、`realtimescheduler-scaling`、`realtimescheduler-max-drift`、`external-event-source-class`、`continuous-sampler-default-step`、`continuous-integrator-method` 等至少 6 项。
+    - **每个接口**需说明：调用前置条件、调用方（仿真内核主循环 / 用户派生采样器模块 / activity 协程 / 命令行运行器）、错误处理策略（漂移超限、外部源断开、积分发散、协程栈溢出等）、阻塞/非阻塞与可重入性约束。
+    - 接口稳定性约束：调度器抽象接口与协程接口为**强稳定接口**（仿真内核语义零侵入承诺的契约）；采样器模块基类接口为**扩展点接口**（用户派生类实现）；外部事件源接口为**演进接口**（允许新增协议适配派生类）；时间映射接口为**内部辅助接口**。
+    - **不写真实代码片段**，**接口签名以中文+伪代码描述**，**不出现 C++ 真实语法**（`template<>`、`std::shared_ptr`、命名空间分隔符、箭头返回类型等），**不在接口签名中引入多线程原语或乐观回滚语义**。
+
+  **Must NOT do**：
+  - 不出现品牌产品名（omnetpp/OMNeT/OMNEST 等）
+  - 不出现具体源码文件名（如 `cscheduler.cc`、`ccoroutine.cc`），所有内核类用脱敏后的"中文名（脱敏自 cXxx）"括注一次后续仅用中文名
+  - **不出现三维相关任何内容**（如卫星三维显示、轨道三维可视化、OpenGL/WebGL/OSG 等）
+  - 不写出 C++ 代码片段
+  - 不展开完整的 ODE 数值求解理论（仅在表中列名 + 一句话说明）；不引入"复杂自适应求解器（如 LSODA、Dormand-Prince）"实现细节，仅可作为"理论可选项"列出
+  - 不引入"多线程实时仿真"实现细节（本平台调度器在单线程内多路等待，不展开线程模型）
+  - 接口签名以中文+伪代码描述，**不出现 C++ 真实语法**（`template<>`、`std::shared_ptr`、`namespace ::`、`->` 等），**不在接口签名中引入多线程原语或回滚语义**
+
+  **Recommended Agent Profile**：
+  - **Category**: `writing` — 长文档章节撰写
+  - **Skills**: 无（直接写作）
+
+  **Parallelization**：
+  - **Can Run In Parallel**: YES
+  - **Parallel Group**: Wave 3（与 T11、T12、T13、T13b 并行）
+  - **Blocks**: T14
+  - **Blocked By**: T1（术语映射表）、T8（仿真内核）、T10（运行环境抽象层）
+
+  **References**：
+  - 调度器核心：`include/omnetpp/cscheduler.h`（cScheduler 基类、cSequentialScheduler、cRealTimeScheduler）、`src/sim/cscheduler.cc`
+  - 实时调度配置项：`realtimescheduler-scaling`（cscheduler.cc 第 29 行）
+  - 协程支持：`include/omnetpp/ccoroutine.h`、`src/sim/ccoroutine.cc`
+  - 双模块模式：`include/omnetpp/csimplemodule.h`（FL_USESACTIVITY 标志、handleMessage/activity 注释）
+  - 自消息调度原语：`csimplemodule.h` 第 534 行 `scheduleAt()`、`scheduleAfter()`、`rescheduleAt()`、`cancelEvent()`
+  - 事件队列：`include/omnetpp/cfutureeventset.h`、`src/sim/ceventheap.cc`
+  - 术语映射表 `.sisyphus/scratch/terminology-map.md`
+  - 模板章节 5.X
+  - 学术参考：实时仿真 / 硬件在环（HIL）相关文献；离散事件与连续过程混合仿真（DEVS&DESS 思想）
+
+  **Acceptance Criteria**：
+  - [ ] 5.9 节存在
+  - [ ] 节内行数 ≥ 180
+  - [ ] 至少 2 个 mermaid 图（体系结构分层 + 混合调度时序）
+  - [ ] 至少 4 个表格（调度器对比、实时配置项、积分算法对比、建模风格对比 之中至少 4 项）
+  - [ ] 至少 9 个 `####` 四级分层（覆盖 5.9.1~5.9.9）
+  - [ ] 三维/绘图禁词命中数 = 0
+  - [ ] `omnetpp` / `cscheduler.cc` 等具体源码文件名命中数 = 0
+  - [ ] 必须出现关键概念："连续时间"、"实时"、"墙钟"、"采样"、"积分"、"外部事件源"、"协程"、"硬件在环"或"HIL"
+  - [ ] **接口设计小节存在（`#### 5.9.10 接口设计`）∧ 接口一览表 ≥ 1 张 ∧ 接口数 ≥ 6 ∧ 覆盖 6 类（调度器抽象/时间映射/外部事件源/连续状态采样器/协程/调度器注册）**
+
+  **QA Scenarios**：
+  ```
+  Scenario: 5.9 混合调度子系统结构完整且严格脱敏
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.9/,/^## /' "$DOC" | wc -l                            # ≥ 180
+      2. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c 'mermaid'                 # ≥ 2
+      3. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '^####'                   # ≥ 9
+      4. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '^|'                      # ≥ 16
+      5. awk '/^### 5\.9/,/^## /' "$DOC" | grep -ic 'omnetpp\|cscheduler\.cc\|ccoroutine\.cc\|csimplemodule\.h'  # = 0
+      6. awk '/^### 5\.9/,/^## /' "$DOC" | grep -iEc '三维|3D|opengl|webgl|立体可视|three\.js|osg'  # = 0
+    Evidence: .sisyphus/evidence/task-13c-chapter5_9.txt
+
+  Scenario: 5.9 必含核心概念关键词
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '连续时间'                 # ≥ 3
+      2. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '实时'                     # ≥ 4
+      3. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '墙钟'                     # ≥ 3
+      4. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '采样'                     # ≥ 3
+      5. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '积分'                     # ≥ 2
+      6. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '外部事件源'               # ≥ 3
+      7. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '协程'                     # ≥ 2
+      8. awk '/^### 5\.9/,/^## /' "$DOC" | grep -Ec '硬件在环|HIL'             # ≥ 1
+      9. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '可插拔'                   # ≥ 2
+    Evidence: .sisyphus/evidence/task-13c-keywords.txt
+
+  Scenario: 5.9 接口设计小节齐备且脱 C++ 真实语法
+    Tool: Bash
+    Steps:
+      1. awk '/^### 5\.9/,/^## /' "$DOC" | grep -c '#### 5\.9\.10 接口设计'                  # = 1
+      2. awk '/^#### 5\.9\.10 接口设计/,/^### /' "$DOC" | grep -c '^|'                       # ≥ 8（表头+分隔+≥6接口行）
+      3. awk '/^#### 5\.9\.10 接口设计/,/^### /' "$DOC" | grep -Ec '调度器|时间映射|外部事件源|采样器|协程|注册'  # ≥ 6（六类覆盖）
+      4. awk '/^#### 5\.9\.10 接口设计/,/^### /' "$DOC" | grep -iEc 'std::|template<|namespace |::|->'  # = 0（脱C++真实语法）
+      5. awk '/^#### 5\.9\.10 接口设计/,/^### /' "$DOC" | grep -iEc 'pthread|mutex|atomic|rollback|time warp'  # = 0（无多线程/回滚语义）
+    Evidence: .sisyphus/evidence/task-13c-chapter5_9-interfaces.txt
+  ```
+
+  **Commit**: NO
+
+- [x] 14. 全文整合、目录生成、统一编号与一致性审校
+
+  **What to do**：
+  - 检查 `docs/卫星星座数字孪生仿真平台-软件设计说明书.md` 章节顺序：1 范围 → 2 引用文档 → 3 CSCI级设计决策 → 4 CSCI体系结构设计 → 5 CSCI详细设计（5.1~5.9，**含分布式并行仿真与混合调度**）→ 6 需求可追溯性 → 7 注释
+  - 在第 1 章前插入 markdown 目录（基于 `^##` 与 `^###` 自动生成）
+  - 统一术语：通览全文将不一致的术语对齐至术语映射表（含分布式并行术语与混合调度术语）
+  - 修复跨章节内部引用（"详见第 5.2 节"等链接，含 5.8、5.9 与其他章节互引）
+  - 执行全部禁词审计：品牌词 + 三维词 + 绘图词，命中数必须均为 0
+  - 检查 markdown 语法：标题层级连续、表格不破损、列表缩进一致
+  - 行数核查：≥ 1100 行（含分布式并行章节与混合调度章节）
+  - 在文末追加文档元数据（编写日期、版本号 V1.0、密级"内部"等）
+
+  **Must NOT do**：
+  - 不修改任何已确认的章节内容（仅做整合、修补、对齐）
+  - 不引入新的设计决策（如发现矛盾，回退到对应任务修复）
+
+  **Recommended Agent Profile**：
+  - **Category**: `unspecified-high`（需通览全文做一致性判断）
+  - **Skills**: 无
+
+  **Parallelization**：
+  - **Can Run In Parallel**: NO（必须最后执行）
+  - **Parallel Group**: Wave 4（独占）
+  - **Blocks**: 最终评审 F1-F4
+  - **Blocked By**: T1-T13c 全部完成
+
+  **References**：
+  - 全文档 `docs/卫星星座数字孪生仿真平台-软件设计说明书.md`
+  - 模板 `.sisyphus/template/软件设计说明_模板.md`（用于核对章节齐全度）
+  - 术语映射表 `.sisyphus/scratch/terminology-map.md`
+
+  **Acceptance Criteria**：
+  - [ ] 文档总行数 ≥ 1100
+  - [ ] 一级标题数量 = 1
+  - [ ] 二级标题数量 ≥ 7
+  - [ ] 第 5 章 `### 5.X` 子章数量 ≥ 9（含 5.8 分布式并行仿真、5.9 混合调度）
+  - [ ] **全文 `#### 5.X.Y 接口设计` 小节数 ≥ 9（每个子系统 5.1~5.9 各含一个接口设计小节）**
+  - [ ] 全文目录段存在且包含全部二级标题
+  - [ ] 品牌禁词命中 = 0
+  - [ ] 三维/绘图禁词命中 = 0
+  - [ ] 文档元数据段存在（版本号、日期、密级）
+
+  **QA Scenarios**：
+  ```
+  Scenario: 全文档结构与脱敏整体校验
+    Tool: Bash
+    Steps:
+      1. wc -l "$DOC"                            # ≥ 1100
+      2. grep -c '^# '  "$DOC"                   # = 1
+      3. grep -c '^## ' "$DOC"                   # ≥ 7
+      4. grep -c '^### 5\.' "$DOC"               # ≥ 9
+      5. grep -c '目录' "$DOC"                    # ≥ 1
+      6. grep -ic 'omnetpp\|omnest\|akaroa\|tkenv\|qtenv\|eclipse\|parsim' "$DOC"  # = 0
+      7. grep -iEc '三维|3D|opengl|webgl|立体可视|three\.js|osg' "$DOC"      # = 0
+      8. grep -c 'V1\.0' "$DOC"                  # ≥ 1（元数据版本号）
+      9. grep -c '5\.8' "$DOC"                   # ≥ 3（分布式并行章节被多处引用）
+     10. grep -c '5\.9' "$DOC"                   # ≥ 3（混合调度章节被多处引用）
+     11. grep -cE '^#### 5\.[1-9]\.[0-9]+ 接口设计' "$DOC"   # ≥ 9（每个子系统 5.1~5.9 各含一个接口设计小节）
+     12. for n in 1 2 3 4 5 6 7 8 9; do awk "/^### 5\\.${n}/,/^### /" "$DOC" | grep -cE '^#### 5\.'"$n"'\.[0-9]+ 接口设计'; done | grep -cv '^0$'  # = 9（每个 5.X 都至少含 1 个接口设计小节）
+     13. for n in 1 2 3 4 5 6 7 8 9; do awk "/^### 5\\.${n}/,/^### /" "$DOC" | awk '/^#### 5\.'"$n"'\.[0-9]+ 接口设计/,/^#### /' | grep -c '^|'; done | awk '{ if($1<8){bad++} } END{ print bad+0 }'  # = 0（每个接口设计小节表行 ≥ 8）
+    Evidence: .sisyphus/evidence/task-14-final-integration.txt
+
+  Scenario: markdown 语法完整性
+    Tool: Bash
+    Steps:
+      1. python3 -c "import re,sys;t=open('$DOC').read();
+         assert t.count('```')%2==0, 'unmatched code fence';
+         print('fences ok')"
+      2. awk -F'|' '/^\|/{print NF}' "$DOC" | sort -u   # 表格列数应稳定
+    Evidence: .sisyphus/evidence/task-14-md-syntax.txt
+  ```
+
+  **Commit**: YES（最终一次提交，包含整本文档）
+  - Message: `docs: 新增《卫星星座数字孪生仿真平台 软件设计说明书》V1.0`
+  - Files: `docs/卫星星座数字孪生仿真平台-软件设计说明书.md`
+  - Pre-commit: 上述全部 QA Scenarios 通过
+
+---
+
+## Final Verification Wave
+
+> 4 个评审 agent 并行运行。**全部通过且用户明确同意后**才标记完成。
+
+- [x] F1. **品牌脱敏审计** — `quick`
+  执行 `grep -ic '禁词' docs/卫星星座数字孪生仿真平台-软件设计说明书.md` 对每个禁词检查（omnetpp、OMNeT、OMNEST、Akaroa、Tkenv、qtenv、Eclipse、Simulte、**parsim**、**cnullmessageprot**、**cmpicomm**、**cplaceholdermod**、**cproxygate**），全部输出必须为 `0`。任何 ≥1 即拒绝并指出文件位置。
+  输出：`禁词命中表 [N词全为0/N词命中] | VERDICT: APPROVE/REJECT`
+  证据：`.sisyphus/evidence/F1-brand-audit.txt`
+
+- [x] F2. **三维脱敏审计** — `quick`
+  执行 `grep -iEnc '三维|3D|3d|opengl|webgl|立体可视|osg|osgearth|three\.js|地球三维|星座三维'` 对所有三维禁词检查，全部输出必须为 `0`。任何 ≥1 即拒绝并打印命中行号。
+  输出：`三维禁词命中表 [N词全为0/N词命中] | VERDICT: APPROVE/REJECT`
+  证据：`.sisyphus/evidence/F2-3d-audit.txt`
+
+- [x] F3. **结构完备性审计** — `quick`
+  执行：(a) `grep -c '^# '`==1 (b) `grep -c '^## '`≥7 (c) `grep -c '^### 5\.'`≥**9**（含 5.8 分布式并行仿真、5.9 混合调度） (d) `wc -l`≥**1100** (e) markdown 表格无 |对齐错误。
+  输出：`一级标题数=N | 二级=N | 5.X章数=N | 行数=N | 表格=N | VERDICT`
+  证据：`.sisyphus/evidence/F3-structure-audit.txt`
+
+- [x] F4. **全文连贯性审校** — `unspecified-high`
+  抽样审校：(1) 第1章是否清晰描述卫星星座数字孪生场景；(2) 第3章设计决策是否覆盖输入响应/安全/可用性等模板要求项；(3) 第4章接口设计是否包含至少 6 个接口（含分布式并行通信接口、混合调度时间源接口）；(4) 第5章每个子系统（5.1~5.9 全部 9 个）是否包含「单元设计决策/约束/数据/逻辑」四要素 **且每个子系统均含 `#### 5.X.Y 接口设计` 小节、接口一览表行数 ≥ 8（表头+分隔+≥6 行接口）、接口签名以中文+伪代码描述无 C++ 真实语法（std::、template<>、namespace、::、->）**；(5) 第6章追溯表行数 ≥ 28；(6) 5.8 章是否覆盖通信抽象/同步协议/前瞻量/分区四个层次；(7) 5.9 章是否覆盖可插拔调度器/实时同步/外部事件源/连续状态推进/协程式建模五个方面；(8) 全文有无连贯性破损（前后章节互引锚点是否对应）。
+  输出：`8 项检查 [N通过/N不通过] + 不通过项目清单 + 9 个子系统接口设计小节存在性逐项确认 | VERDICT`
+  证据：`.sisyphus/evidence/F4-coherence-review.md`
+
+---
+
+## Commit Strategy
+
+- **单次最终提交**：所有任务完成、F1-F4 全部 APPROVE、用户 okay 后单次提交
+  - Message: `docs: 新增卫星星座数字孪生仿真平台软件设计说明书`
+  - Files: `docs/卫星星座数字孪生仿真平台-软件设计说明书.md`
+  - Pre-commit: 无需测试命令
+
+---
+
+## Success Criteria
+
+### 验证命令
+
+```bash
+DOC=docs/卫星星座数字孪生仿真平台-软件设计说明书.md
+test -f "$DOC"                                                          # 文件存在
+grep -ic 'omnetpp\|omnest\|tkenv\|qtenv\|eclipse\|akaroa\|parsim' "$DOC" # 期望: 0
+grep -iEc '三维|3D|3d|opengl|webgl|立体可视|osg|three\.js' "$DOC"        # 期望: 0
+[ "$(grep -c '^# ' "$DOC")" -eq 1 ]                                     # 一级标题=1
+[ "$(grep -c '^## ' "$DOC")" -ge 7 ]                                    # 二级标题≥7
+[ "$(grep -c '^### 5\.' "$DOC")" -ge 9 ]                                # 5.X章节≥9（含分布式并行 5.8、混合调度 5.9）
+[ "$(grep -cE '^#### 5\.[1-9]\.[0-9]+ 接口设计' "$DOC")" -ge 9 ]         # 9 个子系统每个均含一个接口设计小节
+[ "$(wc -l < "$DOC")" -ge 1100 ]                                        # 行数≥1100（含分布式并行+混合调度+9 个接口设计小节）
+```
+
+### 最终清单
+- [x] 全部 16 个 TODO（T1-T13、T13b、T13c、T14）+ 4 个最终验证任务完成
+- [x] Must Have 全部具备（含分布式并行仿真章节四要素：通信抽象/同步协议/前瞻量/分区）
+- [x] Must NOT Have 全部缺席（grep 验证）
+- [ ] 用户在最终评审后明确同意
