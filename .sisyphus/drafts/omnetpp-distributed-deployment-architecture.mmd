@@ -1,0 +1,68 @@
+---
+title: OMNeT++ 分布式部署架构
+---
+flowchart TB
+    subgraph Runtime["运行入口与装配"]
+        direction TB
+        Config["omnetpp.ini\nparallel-simulation\nparsim-num-partitions\nparsim-communications-class\nparsim-synchronization-class"]
+        Envir["Envir / 仿真启动器"]
+        Kernel["仿真内核\ncSimulation"]
+        Config --> Envir --> Kernel
+    end
+
+    subgraph Parsim["并行分布式仿真子系统"]
+        direction TB
+        Synch["同步层\ncParsimSynchronizer\n默认: cNullMessageProtocol"]
+        Part["分区层\ncParsimPartition"]
+        Comm["通信层\ncParsimCommunications"]
+        Look["Lookahead 计算\n默认: cLinkDelayLookahead"]
+        Synch --> Part --> Comm
+        Look -.提供时间界限.-> Synch
+    end
+
+    Kernel -->|scheduler| Synch
+    Kernel -->|cross-partition message| Part
+
+    subgraph LP0["LP0 / 进程 0"]
+        direction TB
+        Mod0["本地真实模块"]
+        Ph1["远端占位模块\ncPlaceholderModule"]
+        Pg0["代理门\ncProxyGate"]
+        Fes0["本地 FES"]
+        Syn0["本地同步实例"]
+        Mod0 --> Pg0
+        Ph1 --> Pg0
+        Syn0 <--> Fes0
+    end
+
+    subgraph LP1["LP1 / 进程 1"]
+        direction TB
+        Mod1["本地真实模块"]
+        Ph0["远端占位模块\ncPlaceholderModule"]
+        Pg1["代理门\ncProxyGate"]
+        Fes1["本地 FES"]
+        Syn1["本地同步实例"]
+        Mod1 --> Pg1
+        Ph0 --> Pg1
+        Syn1 <--> Fes1
+    end
+
+    Part -.实例化与地址对接.-> LP0
+    Part -.实例化与地址对接.-> LP1
+    Synch -.协议实例存在于每个 LP.-> Syn0
+    Synch -.协议实例存在于每个 LP.-> Syn1
+
+    Pg0 -->|业务消息 / 空消息| Comm
+    Comm -->|反序列化并投递| Pg1
+    Pg1 -->|业务消息 / 空消息| Comm
+    Comm -->|反序列化并投递| Pg0
+
+    classDef config fill:#F5F1E8,stroke:#7A5C2E,color:#2F2416,stroke-width:1px;
+    classDef layer fill:#E2F0EA,stroke:#2D6A4F,color:#163828,stroke-width:1px;
+    classDef lp fill:#EAF0F8,stroke:#355C7D,color:#1C2A38,stroke-width:1px;
+    classDef gate fill:#FDEBD3,stroke:#B26A00,color:#4B2E00,stroke-width:1px;
+
+    class Config config;
+    class Synch,Part,Comm,Look layer;
+    class LP0,LP1,Mod0,Mod1,Ph0,Ph1,Fes0,Fes1,Syn0,Syn1 lp;
+    class Pg0,Pg1 gate;

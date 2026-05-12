@@ -14,20 +14,37 @@ License: Academic Public License.
 ## Quick Start
 
 ```bash
-source setenv                    # MUST run first — sets PATH, LD_LIBRARY_PATH
-./configure && make -j$(nproc)   # Build everything
-make tests                       # Run all tests (from root)
+source setenv                              # MUST run first — sets PATH, LD_LIBRARY_PATH
 ```
+
+For a fresh clone, the simplest path is `./install.sh -y` (Linux/macOS), which installs system deps and builds. For manual build:
+
+```bash
+cp configure.user.dist configure.user       # Copy default build config
+source setenv                               # MUST run first
+./configure && make -j$(nproc)              # Build everything
+```
+
+## Running Tests
+
+```bash
+make tests              # Full suite from repo root (builds + runs all)
+cd test && make test_quick                  # Fast subset only (core, envir, common, etc.)
+cd test/core && ./runtest <specific>.test  # Single test
+cd test/core && ./runtest                   # All tests in one directory
+```
+
+Key test suites: `test_core` (kernel, ~750 files), `test_envir`, `test_common`, `test_fingerprint`, `test_scave_*`. See `test/AGENTS.md` for the `.test` file format and full suite list.
 
 ## Repository Structure
 
 ```
 src/          C++ core (10 subsystems — see src/AGENTS.md)
 include/      Public API headers (123 files, all c-prefixed)
-test/         Regression tests (890 .test files — see test/AGENTS.md)
-samples/      Example simulations (20+ — see samples/AGENTS.md)
-python/       Python bindings and tools (see python/AGENTS.md)
-ui/           Eclipse IDE plugins (see ui/AGENTS.md)
+test/         Regression tests — see test/AGENTS.md
+samples/      Example simulations — see samples/AGENTS.md
+python/       Python bindings and tools — see python/AGENTS.md
+ui/           Eclipse IDE plugins — see ui/AGENTS.md
 doc/          Manuals, API docs, guides
 images/       Icons and graphics for simulations
 misc/         Third-party integrations (gdb, emacs, octave)
@@ -37,20 +54,23 @@ releng/       Release engineering scripts
 ## Build System
 
 - `./configure` → generates `Makefile.inc` (detected compilers, paths, flags)
-- `make` builds all: common → sim → envir → cmdenv/qtenv, plus nedxml, scave, etc.
-- Build modes: `MODE=release` (default), `MODE=debug`, sanitize, coverage, profile
+- `cp configure.user.dist configure.user` — required before first `./configure`
+- `configure.user` controls optional features (QtEnv, Python, OSG, SystemC, etc.)
+- Build modes: `MODE=release` (default), `MODE=debug`, `MODE=sanitize`, `MODE=coverage`, `MODE=profile`
 - Library naming: `$(LIB_PREFIX)opp<subsystem>$D$(LIB_SUFFIX)` where `$D` = mode suffix
 - Each src/ subsystem has its own Makefile including `../../Makefile.inc`
 - IDE native libs: `make ui`
+- Build order enforced by Makefile dependency chain (not parallel-safe at top level)
 
 ### Dependency Chain
 
 ```
-common ← layout, eventlog, scave, nedxml, sim, envir, cmdenv, qtenv
+common ← layout, eventlog, scave, nedxml, sim, envir, cmdenv, qtenv, utils
 sim ← nedxml + common
 envir ← sim
 cmdenv, qtenv ← envir
 qtenv ← layout
+utils (standalone tools, built first as prerequisite)
 ```
 
 ## C++ Coding Conventions
@@ -78,7 +98,6 @@ qtenv ← layout
 - **else**: `}\nelse {` pattern
 
 ```cpp
-// Function — opening brace on new line
 void cModule::handleMessage(cMessage *msg)
 {
     if (msg->isSelfMessage())
@@ -136,14 +155,31 @@ void cModule::handleMessage(cMessage *msg)
 - No `override` on destructors
 - Remove redundant initializer-list entries when inline-initialized
 
+## Python Environment
+
+Optional Python bindings and tools require a venv:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r python/requirements.txt   # matplotlib, numpy, pandas
+```
+`setenv` auto-activates `.venv/` if present. Required for `WITH_SCAVE_PYTHON_BINDINGS=yes` and `opp_charttool`.
+
 ## CI/CD
 
 Three GitHub workflows in `.github/workflows/`:
-- `build_release.yml` — Release builds
-- `build_tests.yml` — Build + test on push/PR to master/omnetpp-6.x (ubuntu-24.04, clang, Qt6)
-- `main_tests.yml` — Main test suite
+- `build_release.yml` — Full release builds (Linux, macOS, Windows)
+- `build_tests.yml` — Build verification on push/PR (ubuntu-24.04, clang, Qt6)
+- `main_tests.yml` — Full test suite on push/PR
 
-CI steps: `cp configure.user.dist configure.user` → `source setenv` → `cd test` → `make -j4 test_build`
+CI build steps:
+```bash
+cp configure.user.dist configure.user
+source setenv
+./configure WITH_LIBXML=yes WITH_QTENV=yes WITH_OSG=yes WITH_OSGEARTH=no
+make -j4
+cd test && make test_quick   # runs each test suite
+```
 
 ## Key Entry Points
 
@@ -158,14 +194,6 @@ CI steps: `cp configure.user.dist configure.user` → `source setenv` → `cd te
 | `opp_featuretool` | `src/utils/` | Feature toggle manager |
 | `opp_charttool` | `src/utils/` | Chart generation |
 
-## Known Technical Debt
-
-263 TODO/FIXME items across 99 .cc files. Hotspots:
-- `src/nedxml/nedcrossvalidator.cc` (29)
-- `src/envir/eventlogfilemgr.cc` (15)
-- `src/qtenv/mainwindow.cc` (12)
-- `src/qtenv/qtenv.cc` (12)
-
 ## Navigation Tips
 
 - Kernel internals: `src/sim/` + `include/omnetpp/`
@@ -174,3 +202,4 @@ CI steps: `cp configure.user.dist configure.user` → `source setenv` → `cd te
 - IDE: `ui/` (Eclipse plugin structure)
 - Python: `python/omnetpp/`
 - Public API defines what simulation models can use: `include/omnetpp/`
+- Makefile dependency chain: all `$(BASE)` targets require `utils` built first (see root `Makefile`)
